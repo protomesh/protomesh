@@ -1,0 +1,8 @@
+version: v1
+name: buf.build/vflopes/graviflow
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - DEFAULT

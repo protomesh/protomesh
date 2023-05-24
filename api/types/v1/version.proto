@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package graviflow.api.types.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/example/path/gen;typesv1";
+
+message Version {
+    string sha256_hash = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    int64 index = 3;
+}

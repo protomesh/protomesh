@@ -1,0 +1,165 @@
+syntax = "proto3";
+
+package graviflow.api.types.v1;
+
+import "google/protobuf/duration.proto";
+
+option go_package = "typesv1";
+
+message ServiceMesh {
+
+  message Node {
+    oneof node {
+      HttpIngress http_ingress = 1;
+      Service service = 2;
+      RoutingPolicy routing_policy = 3;
+    }
+  }
+
+  enum TransportProtocol {
+    TRANSPORT_PROTOCOL_UNDEFINED = 0;
+    TRANSPORT_PROTOCOL_TCP = 1;
+    TRANSPORT_PROTOCOL_UDP = 2;
+  }
+
+  enum ApplicationProtocol {
+    APPLICATION_PROTOCOL_UNDEFINED = 0;
+    APPLICATION_PROTOCOL_HTTP1 = 1;
+    APPLICATION_PROTOCOL_HTTP2 = 2;
+  }
+
+  message HttpFilter {
+
+    message HealthCheck { string path = 1; }
+
+    message Cors {}
+
+    message GrpcWeb {}
+
+    message JwtAuthn {
+
+      message ClaimToHeader {
+        string header_name = 1;
+        string claim_name = 2;
+      }
+
+      message RemoteJwks {
+        string http_uri = 1;
+        string cluster_name = 2;
+        google.protobuf.Duration timeout = 3;
+      }
+
+      message FromHeader {
+        string header_name = 1;
+        string value_prefix = 2;
+      }
+
+      message Provider {
+        string provider_name = 1;
+        bool forward = 2;
+        string issuer = 3;
+        repeated string audiences = 4;
+        RemoteJwks remote_jwks = 5;
+        repeated ClaimToHeader claim_to_headers = 6;
+        repeated FromHeader from_headers = 7;
+      }
+
+      message Rule {
+        string match_prefix = 1;
+        repeated string required_providers_names = 2;
+      }
+
+      repeated Provider providers = 1;
+      repeated Rule rules = 2;
+    }
+
+    oneof filter {
+      Cors cors = 1;
+      HealthCheck health_check = 2;
+      GrpcWeb grpc_web = 3;
+      JwtAuthn jwt_authn = 4;
+    }
+  }
+
+  // HttpIngress represents an ingress proxy
+  message HttpIngress {
+
+    // XDS cluster name: must be the same of the envoy config to be matched by
+    // xDS server
+    string xds_cluster_name = 1;
+    // Ingress name (used as route config name for the route specifier)
+    string ingress_name = 2;
+    // Ingress port to listen for incoming requests
+    int32 listen_port = 3;
+    // Http filters to apply to the ingress listener
+    repeated HttpFilter http_filters = 4;
+  }
+
+  message Http1Options {}
+
+  message Http2Options { int32 max_concurrent_streams = 1; }
+
+  // Service represents a downstream target for envoy (Cluster)
+  message Service {
+
+    string service_name = 1;
+
+    message Instance {
+      // Unique identifier for this instance
+      string hostname = 1;
+      TransportProtocol transport_protocol = 2;
+      string address = 3;
+      int32 port = 4;
+    }
+
+    repeated Instance instances = 2;
+
+    google.protobuf.Duration connect_timeout = 3;
+
+    oneof instance_application_protocol_options {
+      Http1Options instance_http1_options = 4;
+      Http2Options instance_http2_options = 5;
+    }
+  }
+
+  // Represents a routing policy for the control plane (Envoy Virtual Host)
+  message RoutingPolicy {
+
+    string policy_name = 1;
+
+    message Route {
+      string match_prefix = 1;
+      string target_cluster = 2;
+      google.protobuf.Duration timeout = 3;
+    }
+
+    repeated Route routes = 2;
+
+    message Cors {
+      repeated string allow_origin_string_match_prefix = 1;
+      repeated string allow_methods = 2;
+      repeated string allow_headers = 3;
+      repeated string expose_headers = 4;
+      google.protobuf.Duration max_age = 5;
+    }
+
+    Cors cors = 3;
+
+    // XDS cluster name: must be the same of the envoy config to be matched by
+    // xDS server
+    string xds_cluster_name = 4;
+  }
+
+
+  message Edge {
+    oneof edge {
+        AwsLambdaGrpcEdge aws_lambda_grpc_edge = 1;
+    }
+  }
+
+  message AwsLambdaGrpcEdge {
+    string full_method_name = 1;
+    string function_name = 2;
+    string qualifier = 3;
+  }
+}

@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package graviflow.api.types.v1;
+
+option go_package = "typesv1";
+
+import "google/protobuf/any.proto";
+import "api/types/v1/version.proto";
+
+// Resource is the representation of any resource for the control plane.
+message Resource {
+  // namespace of the resource (logical unit).
+  string namespace = 1;
+
+  // id is the unique id of the resource.
+  string id = 2;
+  
+  // name is the singular name for the resource,
+  string name = 3;
+
+  // spec is the specification data of the resource.
+  google.protobuf.Any spec = 4;
+
+  // version is the current version of the resource.
+  graviflow.api.types.v1.Version version = 5;
+}
