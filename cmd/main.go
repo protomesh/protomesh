@@ -5,77 +5,80 @@ import (
 	"net/http"
 	"os"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
-	"dev.azure.com/pomwm/pom-tech/graviflow/internal"
-	"dev.azure.com/pomwm/pom-tech/graviflow/internal/server"
-	awsprovider "dev.azure.com/pomwm/pom-tech/graviflow/provider/aws"
-	"dev.azure.com/pomwm/pom-tech/graviflow/provider/temporal"
-	tlsprovider "dev.azure.com/pomwm/pom-tech/graviflow/provider/tls"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/upper-institute/graviflow"
+	"github.com/upper-institute/graviflow/internal"
+	"github.com/upper-institute/graviflow/internal/server"
+	awsprovider "github.com/upper-institute/graviflow/provider/aws"
+	"github.com/upper-institute/graviflow/provider/temporal"
 	temporalcli "go.temporal.io/sdk/client"
 	"google.golang.org/grpc"
 )
 
-type injector struct {
-	aws *awsprovider.AwsBuilder[*injector] `config:"aws"`
+var printConfig = os.Getenv("PRINT_CONFIG") == "true"
 
-	httpServer   *server.HttpServer[*injector] `config:"http.server"`
+type injector struct {
+	Aws *awsprovider.AwsBuilder[*injector] `config:"aws"`
+
+	HttpServer   *server.HttpServer[*injector] `config:"http.server"`
 	httpServeMux *http.ServeMux
 
-	temporal       *temporal.TemporalBuilder[*injector] `config:"temporal"`
+	Temporal       *temporal.TemporalBuilder[*injector] `config:"temporal"`
 	temporalClient temporalcli.Client
 
-	grpcServer *server.GrpcServer[*injector] `config:"grpc.server"`
+	GrpcServer *server.GrpcServer[*injector] `config:"grpc.server"`
 
-	enableServer graviflow.Config `config:"enable.server,bool" default:"false" usage:"Enable Graviflow server instance (resource store and Envoy xDS)"`
-	server       *serverInstance  `config:"server"`
+	EnableServer graviflow.Config           `config:"enable.server,bool" default:"false" usage:"Enable Graviflow server instance (resource store and Envoy xDS)"`
+	Server       *ServerInstance[*injector] `config:"server"`
 
-	enableProxy graviflow.Config `config:"enable.proxy,bool" default:"false" usage:"Enable Graviflow proxy instance (synchronized with resource store)"`
-	proxy       *proxyInstance   `config:"proxy"`
+	EnableProxy graviflow.Config          `config:"enable.proxy,bool" default:"false" usage:"Enable Graviflow proxy instance (synchronized with resource store)"`
+	Proxy       *ProxyInstance[*injector] `config:"proxy"`
 
-	enableController graviflow.Config    `config:"enable.controller,bool" default:"false" usage:"Enable Graviflow controller instance (temporal worker and service mesh workflows/activities)"`
-	controller       *controllerInstance `config:"controller"`
+	EnableController graviflow.Config               `config:"enable.controller,bool" default:"false" usage:"Enable Graviflow controller instance (temporal worker and service mesh workflows/activities)"`
+	Controller       *ControllerInstance[*injector] `config:"controller"`
 }
 
-func (i *injector) InjectApp(app graviflow.App[*injector]) {
+func (i *injector) InjectApp(app graviflow.App) {
 
-	i.aws = &awsprovider.AwsBuilder[*injector]{}
+	i.Aws = &awsprovider.AwsBuilder[*injector]{}
 
 	i.httpServeMux = http.NewServeMux()
 
-	i.grpcServer = &server.GrpcServer[*injector]{}
+	i.GrpcServer = &server.GrpcServer[*injector]{}
 
-	i.httpServer = &server.HttpServer[*injector]{
-		TlsBuilder: &tlsprovider.TlsBuilder[*injector]{
-			Certificate: &tlsprovider.TlsCertificateLoader[*injector]{
-				PrivateKey:   &tlsprovider.KeyLoader[*injector]{},
-				Certificates: &tlsprovider.CertificateLoader[*injector]{},
-			},
-			RootCAs: &tlsprovider.CertificateLoader[*injector]{},
-		},
+	i.HttpServer = &server.HttpServer[*injector]{
 		HttpHandler: i.httpServeMux,
-		GrpcHandler: i.grpcServer,
+		GrpcHandler: i.GrpcServer,
 	}
 
-	i.temporal = &temporal.TemporalBuilder[*injector]{}
+	i.Temporal = &temporal.TemporalBuilder[*injector]{}
 
-	i.server = newServerInstance()
-	i.proxy = newProxyInstance()
-	i.controller = newControllerInstance()
+	i.Server = NewServerInstance[*injector]()
+	i.Proxy = NewProxyInstance[*injector]()
+	i.Controller = NewControllerInstance[*injector]()
+
+	if printConfig {
+		graviflow.InjectAppAndPrint(app, i)
+		return
+	}
 
 	graviflow.InjectApp(app, i)
 
 }
 
+func (i *injector) Dependency() *injector {
+	return i
+}
+
 func (i *injector) GetGrpcServer() *grpc.Server {
 
-	return i.grpcServer.Server
+	return i.GrpcServer.Server
 
 }
 
 func (i *injector) SetGrpcProxyRouter(router server.GrpcRouter) {
 
-	i.grpcServer.GrpcProxy = &server.GrpcProxy{
+	i.GrpcServer.GrpcProxy = &server.GrpcProxy{
 		Router: router,
 	}
 
@@ -83,7 +86,7 @@ func (i *injector) SetGrpcProxyRouter(router server.GrpcRouter) {
 
 func (i *injector) GetAwsConfig() aws.Config {
 
-	return i.aws.Config
+	return i.Aws.AwsConfig
 
 }
 
@@ -93,15 +96,11 @@ func (i *injector) GetTemporalClient() temporalcli.Client {
 
 }
 
-func (i *injector) Dependency() *injector {
-	return i
-}
-
 var config = &graviflow.Configurator[*injector]{
 	FlagSet:   flag.CommandLine,
-	KeyCase:   graviflow.SnakeCaseKey,
+	KeyCase:   graviflow.JsonPathCase,
 	Separator: ".",
-	Print:     os.Getenv("PRINT_CONFIG") == "true",
+	Print:     printConfig,
 }
 
 func main() {
@@ -125,36 +124,54 @@ func main() {
 	config.ApplyConfigs(dep)
 
 	// Initialize AWS SDK config
-	dep.aws.Initialize()
+	dep.Aws.Initialize()
 
-	if dep.enableProxy.BoolVal() || dep.enableServer.BoolVal() {
+	if dep.EnableProxy.BoolVal() || dep.EnableServer.BoolVal() {
 		// Initialize gRPC server
-		dep.grpcServer.Initialize()
-
-		// Start and defer stop of HTTP Server
-		dep.httpServer.Start()
-		defer dep.httpServer.Stop()
+		dep.GrpcServer.Initialize()
 	}
 
-	if dep.enableController.BoolVal() {
-		dep.temporalClient = dep.temporal.GetTemporalClient()
+	if dep.EnableController.BoolVal() {
+		dep.temporalClient = dep.Temporal.GetTemporalClient()
 		defer dep.temporalClient.Close()
 	}
 
-	if dep.enableServer.BoolVal() {
-		dep.server.Start()
-		defer dep.server.Stop()
+	if dep.EnableServer.BoolVal() {
+		dep.Server.Start()
+		defer dep.Server.Stop()
 	}
 
-	if dep.enableProxy.BoolVal() {
-		dep.proxy.Start()
-		defer dep.proxy.Stop()
+	if dep.EnableProxy.BoolVal() {
+		dep.Proxy.Start()
+		defer dep.Proxy.Stop()
 	}
 
-	if dep.enableController.BoolVal() {
-		dep.controller.Start()
-		defer dep.controller.Stop()
+	if dep.EnableController.BoolVal() {
+		dep.Controller.Start()
+		defer dep.Controller.Stop()
 	}
+
+	if dep.EnableProxy.BoolVal() || dep.EnableServer.BoolVal() {
+		// Start and defer stop of gRPC Server
+		dep.GrpcServer.Start()
+		defer dep.GrpcServer.Start()
+
+		// Start and defer stop of HTTP Server
+		dep.HttpServer.Start()
+		defer dep.HttpServer.Stop()
+	}
+
+	log := app.Log()
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Panic("Failed to get hostname", "error", err)
+	}
+
+	pid := os.Getpid()
+	uid := os.Getuid()
+
+	log.Info("Application started", "hostname", hostname, "pid", pid, "uid", uid)
 
 	// Wait for interruption signal
 	internal.WaitInterruption()

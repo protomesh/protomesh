@@ -1,13 +1,13 @@
 version: "3.5"
 services:
 
-  transformation-worker:
-    image: transformation-worker:local
+  proxy:
+    image: graviflow:local
     build:
       context: .
-      dockerfile: cmd/transformation-worker/Containerfile
+      dockerfile: Containerfile
     restart: always
-    command: python -u cmd/transformation-worker/worker.py
+    command: graviflow -config-file /var/graviflow/proxy.toml
     env_file:
       - .env
     volumes:
@@ -16,27 +16,76 @@ services:
       # Mount the shared configuration directory, used by the AWS CLI and AWS SDKs
       # On Windows, this directory can be found at "%UserProfile%\.aws"
       - $HOME/.aws/:/home/.aws/
+      # Configuration file
+      - ${PWD}/cmd/proxy.toml:/var/graviflow/proxy.toml
     environment:
       # define the home folder; credentials will be read from $HOME/.aws
       HOME: "/home"
-      # You can change which AWS CLI Profile is used
-      AWS_REGION: "sa-east-1"
-      AWS_PROFILE: "pomwm-prod"
-      WEALTH_BUCKET: "prod-319032453429-wealth-lake"
-      TEMPORAL_SERVER_ADDRESS: "temporal:7233"
-    # links:
-    #   - flipbook
-    #   - temporal
     networks:
-      - wealth-network
+      - graviflow
+    ports:
+      - 5770:5770
+    depends_on:
+      - server
 
-  data-worker:
-    image: data-worker:local
+  server:
+    image: graviflow:local
     build:
       context: .
-      dockerfile: cmd/data-worker/Containerfile
+      dockerfile: Containerfile
     restart: always
-    command: ./data-worker --log-env dev --aws-s3-datalake-bucket prod-319032453429-wealth-lake --temporal-address temporal:7233 --session-server-address private-services:9090
+    command: graviflow -config-file /var/graviflow/server.toml
+    env_file:
+      - .env
+    depends_on:
+      - postgresql
+    volumes:
+      # Mount /var/run so we can access docker.sock and talk to Docker
+      - /var/run:/var/run
+      # Mount the shared configuration directory, used by the AWS CLI and AWS SDKs
+      # On Windows, this directory can be found at "%UserProfile%\.aws"
+      - $HOME/.aws/:/home/.aws/
+      # Configuration file
+      - ${PWD}/cmd/server.toml:/var/graviflow/server.toml
+    environment:
+      # define the home folder; credentials will be read from $HOME/.aws
+      HOME: "/home"
+    ports:
+      - 6680:6680
+    networks:
+      - graviflow
+
+  server-ui:
+    image: fullstorydev/grpcui
+    restart: always
+    entrypoint:
+      - /bin/grpcui
+    command:
+      # - -plaintext
+      - -use-reflection
+      - -vv
+      - -insecure
+      - -port
+      - '8080'
+      - -bind
+      - '0.0.0.0'
+      - -debug-client
+      - -open-browser=false
+      - server:6680
+    ports:
+      - '6690:8080'
+    depends_on:
+      - server
+    networks:
+      - graviflow
+
+  controller:
+    image: graviflow:local
+    build:
+      context: .
+      dockerfile: Containerfile
+    restart: always
+    command: graviflow -config-file /var/graviflow/controller.toml
     env_file:
       - .env
     volumes:
@@ -45,68 +94,16 @@ services:
       # Mount the shared configuration directory, used by the AWS CLI and AWS SDKs
       # On Windows, this directory can be found at "%UserProfile%\.aws"
       - $HOME/.aws/:/home/.aws/
+      # Configuration file
+      - ${PWD}/cmd/controller.toml:/var/graviflow/controller.toml
     environment:
       # define the home folder; credentials will be read from $HOME/.aws
       HOME: "/home"
-      # You can change which AWS CLI Profile is used
-      AWS_REGION: "sa-east-1"
-      AWS_PROFILE: "pomwm-prod"
-    # links:
-    #   - flipbook
-    #   - temporal
     networks:
-      - wealth-network
-
-  # wealth-service:
-  #   image: wealth-service:local
-  #   build:
-  #     context: .
-  #     dockerfile: cmd/wealth-service/Containerfile
-  #   restart: always
-  #   command: ./wealth-service --log-env dev --server-address=0.0.0.0:9090 --tls-enable=false --use-local-dynamo=true
-  #   env_file:
-  #     - .env
-  #   ports:
-  #     - '9095:9090'
-  #   networks:
-  #     - wealth-network
-  
-  # wealth-service-ui:
-  #   image: fullstorydev/grpcui
-  #   restart: always
-  #   entrypoint:
-  #     - /bin/grpcui
-  #   command:
-  #     - -plaintext
-  #     - -use-reflection
-  #     - -vv
-  #     - -port
-  #     - '6334'
-  #     - -bind
-  #     - '0.0.0.0'
-  #     - -debug-client
-  #     - -open-browser=false
-  #     - wealth-service:9090
-  #   ports:
-  #     - '6334:6334'
-  #   depends_on:
-  #     - wealth-service
-  #   networks:
-  #     - wealth-network
-
-  # wealth-service-proxy:
-  #   image: wealth-service:local
-  #   build:
-  #     context: .
-  #     dockerfile: cmd/wealth-service/Containerfile
-  #   restart: always
-  #   command: envoy -l info -c /app/envoy_compose.yaml
-  #   depends_on:
-  #     - wealth-service
-  #   ports:
-  #     - '9085:9090'
-  #   networks:
-  #     - wealth-network
+      - graviflow
+    depends_on:
+      - server
+      - temporal
 
   # dynamodb:
   #   image: amazon/dynamodb-local
@@ -114,130 +111,117 @@ services:
   #     - -jar
   #     - DynamoDBLocal.jar
   #     - -sharedDb
-  #     - -inMemory
+  #     # - -inMemory
   #     - -port
   #     - '8000'
   #   restart: always
   #   ports:
-  #     - '8000:8000'
+  #     - 8000:8000
   #   networks:
-  #     - wealth-network
-  
+  #     - graviflow
+
   # dynamodb-admin:
   #   image: aaronshaf/dynamodb-admin
   #   ports:
-  #     - "8001:8001"
+  #     - 8001:8001
   #   environment:
   #     DYNAMO_ENDPOINT: "http://dynamodb:8000"
   #   depends_on:
   #     - dynamodb
   #   restart: always
   #   networks:
-  #     - wealth-network
+  #     - graviflow
+
+
+  elasticsearch:
+    environment:
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - xpack.security.enabled=false
+    image: elasticsearch:${ELASTICSEARCH_VERSION}
+    networks:
+      - graviflow
+    ports:
+      - 9200:9200
+    volumes:
+      - /var/lib/elasticsearch/data
+
+  postgresql:
+    environment:
+      POSTGRES_PASSWORD: graviflow
+      POSTGRES_USER: graviflow
+    image: postgres:${POSTGRESQL_VERSION}
+    networks:
+      - graviflow
+    ports:
+      - 5432:5432
+    volumes:
+      - /var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+       - /var/lib/pgadmin
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    networks:
+      - graviflow
+    restart: unless-stopped
+
+  temporal:
+    restart: always
+    depends_on:
+      - postgresql
+      - elasticsearch
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=graviflow
+      - POSTGRES_PWD=graviflow
+      - POSTGRES_SEEDS=postgresql
+      - ENABLE_ES=true
+      - ES_SEEDS=elasticsearch
+      - ES_VERSION=v7
+    image: temporalio/auto-setup:${TEMPORAL_VERSION}
+    networks:
+      - graviflow
+    ports:
+      - 7233:7233
+    labels:
+      kompose.volume.type: configMap
+
+  temporal-admin-tools:
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    image: temporalio/admin-tools:${TEMPORAL_VERSION}
+    networks:
+      - graviflow
+    stdin_open: true
+    tty: true
+
+  temporal-ui:
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    image: temporalio/ui:${TEMPORAL_UI_VERSION}
+    networks:
+      - graviflow
+    ports:
+      - 8080:8080
 
 networks:
-  wealth-network:
+  graviflow:
     driver: bridge
-    name: pomwm
-
-  # flipbook-ui:
-  #   image: fullstorydev/grpcui
-  #   restart: always
-  #   entrypoint:
-  #     - /bin/grpcui
-  #   command:
-  #     - -plaintext
-  #     - -use-reflection
-  #     - -vv
-  #     - -port
-  #     - '6334'
-  #     - -bind
-  #     - '0.0.0.0'
-  #     - -debug-client
-  #     - -open-browser=false
-  #     - flipbook:6333
-  #   ports:
-  #     - '6334:6334'
-  #   depends_on:
-  #     - flipbook
-  #   networks:
-  #     - wealth-network
-
-  # flipbook:
-  #   image: ghcr.io/upper-institute/flipbook/flipbook:commit-955c200cf29f56d434455ded18ae2a5f9ee4affe
-  #   restart: always
-  #   depends_on:
-  #     - dynamodb
-  #   environment:
-  #     - AWS_ACCESS_KEY_ID=dummy
-  #     - AWS_SECRET_ACCESS_KEY=dummy
-  #   ports:
-  #     - '6333:6333'
-  #   command:
-  #     - start
-  #     - --log-env=dev
-  #     - --log-level=debug
-  #     - --server-address=0.0.0.0:6333
-  #     - --tls-enable=false
-  #     - --store-driver=aws_dynamodb
-  #     - --aws-dynamodb-endpoint-url=http://dynamodb:8000
-  #   networks:
-  #     - wealth-network
-
-  # postgresql:
-  #   container_name: temporal-postgresql
-  #   environment:
-  #     POSTGRES_PASSWORD: temporal
-  #     POSTGRES_USER: temporal
-  #   image: postgres:${POSTGRESQL_VERSION}
-  #   networks:
-  #     - wealth-network
-  #   ports:
-  #     - 5432:5432
-  #   volumes:
-  #     - /var/lib/postgresql/data
-
-  # temporal:
-  #   container_name: temporal
-  #   restart: always
-  #   depends_on:
-  #     - postgresql
-  #   environment:
-  #     - DB=postgresql
-  #     - DB_PORT=5432
-  #     - POSTGRES_USER=temporal
-  #     - POSTGRES_PWD=temporal
-  #     - POSTGRES_SEEDS=postgresql
-  #   image: temporalio/auto-setup:${TEMPORAL_VERSION}
-  #   networks:
-  #     - wealth-network
-  #   ports:
-  #     - 7233:7233
-  #   labels:
-  #     kompose.volume.type: configMap
-
-  # temporal-admin-tools:
-  #   container_name: temporal-admin-tools
-  #   depends_on:
-  #     - temporal
-  #   environment:
-  #     - TEMPORAL_CLI_ADDRESS=temporal:7233
-  #   image: temporalio/admin-tools:${TEMPORAL_VERSION}
-  #   networks:
-  #     - wealth-network
-  #   stdin_open: true
-  #   tty: true
-
-  # temporal-ui:
-  #   container_name: temporal-ui
-  #   depends_on:
-  #     - temporal
-  #   environment:
-  #     - TEMPORAL_ADDRESS=temporal:7233
-  #     - TEMPORAL_CORS_ORIGINS=http://localhost:3000
-  #   image: temporalio/ui:${TEMPORAL_UI_VERSION}
-  #   networks:
-  #     - wealth-network
-  #   ports:
-  #     - 8080:8080
-
+    name: graviflow

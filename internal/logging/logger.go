@@ -1,7 +1,7 @@
 package logging
 
 import (
-	"dev.azure.com/pomwm/pom-tech/graviflow"
+	"github.com/upper-institute/graviflow"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -18,7 +18,11 @@ func (l *LoggerBuilder) Build() graviflow.Logger {
 
 	zapConfig := zap.NewProductionConfig()
 
-	zapConfig.EncoderConfig.EncodeLevel = zapcore.LowercaseColorLevelEncoder
+	if l.LogDev.IsSet() && l.LogDev.BoolVal() {
+		zapConfig = zap.NewDevelopmentConfig()
+		zapConfig.EncoderConfig.EncodeLevel = zapcore.LowercaseColorLevelEncoder
+	}
+
 	zapConfig.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 
 	if l.LogLevel.IsSet() {
@@ -36,17 +40,15 @@ func (l *LoggerBuilder) Build() graviflow.Logger {
 		}
 	}
 
-	if l.LogDev.IsSet() && l.LogDev.BoolVal() {
-		zapConfig = zap.NewDevelopmentConfig()
-	}
-
 	zapConfig.Encoding = "console"
 
 	if l.LogJson.IsSet() && l.LogJson.BoolVal() {
 		zapConfig.Encoding = "json"
 	}
 
-	logger, err := zapConfig.Build()
+	logger, err := zapConfig.Build(
+		zap.AddCallerSkip(1),
+	)
 	if err != nil {
 		panic(err)
 	}

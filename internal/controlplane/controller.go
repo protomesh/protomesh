@@ -1,7 +1,7 @@
 package controlplane
 
 import (
-	"dev.azure.com/pomwm/pom-tech/graviflow"
+	"github.com/upper-institute/graviflow"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/worker"
 )
@@ -16,11 +16,11 @@ type ControllerDependency interface {
 }
 
 type Controller[Dependency ControllerDependency] struct {
-	graviflow.AppInjector[Dependency]
+	*graviflow.AppInjector[Dependency]
 
 	WorkerTaskQueue graviflow.Config `config:"worker.task.queue,str" default:"graviflow" usage:"Temporal task queue to register activities and workflows"`
 
-	worker.Worker
+	Worker worker.Worker
 }
 
 func NewController[Dependency ControllerDependency]() *Controller[Dependency] {

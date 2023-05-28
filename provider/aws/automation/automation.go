@@ -1,10 +1,10 @@
 package automation
 
 import (
-	"dev.azure.com/pomwm/pom-tech/graviflow"
-	apiv1 "dev.azure.com/pomwm/pom-tech/graviflow/proto/api/v1"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/aws/aws-sdk-go-v2/service/servicediscovery"
+	"github.com/upper-institute/graviflow"
+	apiv1 "github.com/upper-institute/graviflow/proto/api/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/worker"
 )
@@ -16,7 +16,7 @@ type AutomationDependency interface {
 }
 
 type AutomationSet[Dependency AutomationDependency] struct {
-	graviflow.AppInjector[Dependency]
+	*graviflow.AppInjector[Dependency]
 }
 
 func (as *AutomationSet[Dependency]) Register(wk worker.Worker) {

@@ -1,6 +1,8 @@
 package config
 
-import "dev.azure.com/pomwm/pom-tech/graviflow"
+import (
+	"github.com/upper-institute/graviflow"
+)
 
 type compositeSource struct {
 	s   []graviflow.ConfigSource
@@ -35,16 +37,36 @@ func (c *compositeSource) Get(k string) graviflow.Config {
 		return cr
 	}
 
+	var defVal graviflow.Config
+
 	for _, s := range c.s {
 
 		cr := s.Get(k)
 
-		if cr.IsSet() {
-			c.crs[k] = cr
-			return cr
+		if cr != nil && cr.IsSet() {
+
+			if s.Has(k) {
+				c.crs[k] = cr
+				return cr
+			}
+
+			defVal = cr
+
 		}
 
 	}
 
+	if defVal != nil {
+		return defVal
+	}
+
 	return emptyConfig()
+}
+
+func (c *compositeSource) Has(k string) bool {
+
+	cfg := c.Get(k)
+
+	return cfg != nil && cfg.IsSet()
+
 }

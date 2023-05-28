@@ -2,104 +2,130 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
-	"dev.azure.com/pomwm/pom-tech/graviflow/internal/client"
-	"dev.azure.com/pomwm/pom-tech/graviflow/internal/controlplane"
-	apiv1 "dev.azure.com/pomwm/pom-tech/graviflow/proto/api/v1"
-	awsprovider "dev.azure.com/pomwm/pom-tech/graviflow/provider/aws"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/upper-institute/graviflow"
+	"github.com/upper-institute/graviflow/internal/client"
+	"github.com/upper-institute/graviflow/internal/controlplane"
+	apiv1 "github.com/upper-institute/graviflow/proto/api/v1"
+	postgresprovider "github.com/upper-institute/graviflow/provider/postgres"
 	"google.golang.org/grpc"
 )
 
 type resourceStore_Provider string
 
 const (
-	dynamoDbResourceStore resourceStore_Provider = "awsdynamodb"
+	postgresResourceStore resourceStore_Provider = "postgres"
 )
 
-type serverDeps interface {
+type ServerDeps interface {
 	GetAwsConfig() aws.Config
 	GetGrpcServer() *grpc.Server
-	GetResourceStoreClient() apiv1.ResourceStoreClient
 }
 
-type serverInstance struct {
-	graviflow.AppInjector[serverDeps]
+type ServerInjector interface {
+	GetDynamoDBClient() *dynamodb.Client
+	GetGrpcServer() *grpc.Server
+	GetResourceStoreClient() apiv1.ResourceStoreClient
+	GetSqlDatabase() *sql.DB
+}
+
+type ServerInstance[D ServerDeps] struct {
+	*graviflow.AppInjector[ServerDeps]
 
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	resourceStore       *client.GrpcClient[*controllerInstance] `config:"resource.store"`
+	ResourceStore       *client.GrpcClient[ServerInjector] `config:"resource.store"`
 	resourceStoreClient apiv1.ResourceStoreClient
 
-	resourceStoreProvider graviflow.Config `config:"resource.store.provider,str" usage:"Resource store persistence layer provider"`
+	ResourceStoreProvider graviflow.Config `config:"resource.store.provider,str" usage:"Resource store persistence layer provider"`
 
-	dynamoDbResourceStore *awsprovider.DynamoDBResourceStore[*serverInstance] `config:"dynamodb"`
+	SqlClient *client.SqlClient[ServerInjector] `config:"sql"`
 
-	enableEnvoyXds graviflow.Config `config:"envoy.xds.enable,bool" usage:"Enable Envoy xDS server"`
+	PostgresResourceStore *postgresprovider.ResourceStore[ServerInjector] `config:"postgres"`
 
-	envoyXds      *controlplane.EnvoyXds[*serverInstance] `config:"envoy.xds"`
+	EnableEnvoyXds graviflow.Config `config:"envoy.xds.enable,bool" usage:"Enable Envoy xDS server"`
+
+	EnvoyXds      *controlplane.EnvoyXds[ServerInjector] `config:"envoy.xds"`
 	envoyXdsErrCh <-chan error
 }
 
-func newServerInstance() *serverInstance {
-	return &serverInstance{
-		resourceStore:         &client.GrpcClient[*controllerInstance]{},
-		dynamoDbResourceStore: &awsprovider.DynamoDBResourceStore[*serverInstance]{},
-		envoyXds:              &controlplane.EnvoyXds[*serverInstance]{},
+func NewServerInstance[D ServerDeps]() *ServerInstance[D] {
+	return &ServerInstance[D]{
+		ResourceStore:         &client.GrpcClient[ServerInjector]{},
+		PostgresResourceStore: &postgresprovider.ResourceStore[ServerInjector]{},
+		EnvoyXds:              &controlplane.EnvoyXds[ServerInjector]{},
 	}
 }
 
-func (s *serverInstance) GetDynamoDBClient() *dynamodb.Client {
+func (s *ServerInstance[D]) GetDynamoDBClient() *dynamodb.Client {
 	return dynamodb.NewFromConfig(s.Dependency().GetAwsConfig())
 }
 
-func (s *serverInstance) GetGrpcServer() *grpc.Server {
+func (s *ServerInstance[D]) GetGrpcServer() *grpc.Server {
 	return s.Dependency().GetGrpcServer()
 }
 
-func (s *serverInstance) GetResourceStoreClient() apiv1.ResourceStoreClient {
+func (s *ServerInstance[D]) GetResourceStoreClient() apiv1.ResourceStoreClient {
 	return s.resourceStoreClient
 }
 
-func (s *serverInstance) Start() {
+func (s *ServerInstance[D]) GetSqlDatabase() *sql.DB {
+	return s.SqlClient.DB
+}
+
+func (s *ServerInstance[D]) Start() {
 
 	s.ctx, s.cancel = context.WithCancel(context.TODO())
 
-	switch resourceStore_Provider(strings.ToLower(s.resourceStoreProvider.StringVal())) {
+	log := s.Log()
 
-	case dynamoDbResourceStore:
-		s.dynamoDbResourceStore.Initialize()
+	provider := strings.ToLower(s.ResourceStoreProvider.StringVal())
+
+	log.Info("Starting Graviflow server", "resourceStoreProvider", provider)
+
+	switch resourceStore_Provider(provider) {
+
+	case postgresResourceStore:
+
+		s.SqlClient.Start()
+
+		s.PostgresResourceStore.Initialize()
 
 	}
 
-	s.resourceStore.Start()
+	s.ResourceStore.Start()
 
-	s.resourceStoreClient = apiv1.NewResourceStoreClient(s.resourceStore.ClientConn)
+	s.resourceStoreClient = apiv1.NewResourceStoreClient(s.ResourceStore.ClientConn)
 
-	if s.enableEnvoyXds.BoolVal() {
+	if s.EnableEnvoyXds.BoolVal() {
 
-		s.envoyXds.Initialize()
+		s.EnvoyXds.Initialize()
 
-		s.envoyXdsErrCh = s.envoyXds.Sync(s.ctx)
+		s.envoyXdsErrCh = s.EnvoyXds.Sync(s.ctx)
 
 	}
 
 }
 
-func (s *serverInstance) Stop() {
+func (s *ServerInstance[D]) Stop() {
 
 	s.cancel()
 
-	if s.enableEnvoyXds.BoolVal() {
+	if s.EnableEnvoyXds.BoolVal() {
 
 		<-s.envoyXdsErrCh
 
 	}
 
-	s.resourceStore.Stop()
+	if s.SqlClient.DB != nil {
+		s.SqlClient.Stop()
+	}
+
+	s.ResourceStore.Stop()
 
 }

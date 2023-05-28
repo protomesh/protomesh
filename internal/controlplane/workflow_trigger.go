@@ -3,11 +3,11 @@ package controlplane
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 
-	typesv1 "dev.azure.com/pomwm/pom-tech/graviflow/proto/api/types/v1"
 	"github.com/google/uuid"
+	"github.com/upper-institute/graviflow/internal/config"
+	typesv1 "github.com/upper-institute/graviflow/proto/api/types/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
@@ -15,40 +15,48 @@ import (
 )
 
 const (
-	resourceNameAttr = "resourceName"
-	resourceIdAttr   = "sourceName"
+	workflowNameAttr = "workflowName"
 )
 
 var (
 	workflowIdNamespace = uuid.MustParse("3d8e41b4-f7d9-11ed-b67e-0242ac120002")
 )
 
-func (c *Controller[Dependency]) TriggerWorkflow(ctx context.Context, res *typesv1.Resource) error {
+func logKvsFromWorkflow(workTrigger *typesv1.WorkflowTrigger) []interface{} {
+	return []interface{}{
+		"workflowName", workTrigger.Name,
+		"taskQueue", workTrigger.TaskQueue,
+		"workflowIdPrefix", workTrigger.IdPrefix,
+	}
+}
 
-	rawSpec, err := res.Spec.UnmarshalNew()
+func (c *Controller[Dependency]) TriggerWorkflowFromProtoJson(ctx context.Context, sourceFormat config.ProtoJson_SourceFormat, buf []byte) error {
+
+	trigger := &typesv1.WorkflowTrigger{}
+
+	err := config.ProtoJsonUnmarshal(buf, sourceFormat, trigger)
 	if err != nil {
 		return err
 	}
 
-	spec, ok := rawSpec.(*typesv1.WorkflowTrigger)
-	if !ok {
-		return fmt.Errorf("Invalid resource type, expecting WorkflowTrigger, received: %s", res.Spec.TypeUrl)
-	}
+	return c.TriggerWorkflow(ctx, trigger)
+}
 
-	logKvs := logKvsFromResource(res)
+func (c *Controller[Dependency]) TriggerWorkflow(ctx context.Context, workTrigger *typesv1.WorkflowTrigger) error {
+
+	logKvs := logKvsFromWorkflow(workTrigger)
 	log := c.Log()
 
 	startOpts := client.StartWorkflowOptions{
-		ID: spec.IdPrefix,
+		ID: workTrigger.IdPrefix,
 		SearchAttributes: map[string]interface{}{
-			resourceIdAttr:   res.Id,
-			resourceNameAttr: res.Name,
+			workflowNameAttr: workTrigger.Name,
 		},
 		WorkflowIDReusePolicy: enums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
 	}
 
 	// Build workflow ID
-	switch idSuffix := spec.IdSuffix.(type) {
+	switch idSuffix := workTrigger.IdSuffix.(type) {
 
 	case *typesv1.WorkflowTrigger_ExactIdSuffix:
 		startOpts.ID = strings.Join([]string{startOpts.ID, idSuffix.ExactIdSuffix}, "")
@@ -65,7 +73,7 @@ func (c *Controller[Dependency]) TriggerWorkflow(ctx context.Context, res *types
 			startOpts.ID = strings.Join([]string{startOpts.ID, randomId.String()}, "")
 
 		case typesv1.WorkflowTrigger_ID_BUILDER_UNIQUE:
-			uniqueId := uuid.NewSHA1(workflowIdNamespace, []byte(res.Id))
+			uniqueId := uuid.NewSHA1(workflowIdNamespace, []byte(workTrigger.IdPrefix))
 			startOpts.ID = strings.Join([]string{startOpts.ID, uniqueId.String()}, "")
 
 		}
@@ -78,7 +86,7 @@ func (c *Controller[Dependency]) TriggerWorkflow(ctx context.Context, res *types
 	tempClient := c.Dependency().GetTemporalClient()
 
 	// Check if workflow is running
-	_, err = tempClient.DescribeWorkflowExecution(ctx, startOpts.ID, "")
+	_, err := tempClient.DescribeWorkflowExecution(ctx, startOpts.ID, "")
 
 	if _, ok := err.(*serviceerror.NotFound); err != nil && !ok {
 
@@ -86,7 +94,7 @@ func (c *Controller[Dependency]) TriggerWorkflow(ctx context.Context, res *types
 
 	} else if err == nil {
 
-		switch ifRunning := spec.IfRunning.(type) {
+		switch ifRunning := workTrigger.IfRunning.(type) {
 
 		case *typesv1.WorkflowTrigger_IfRunningAction_:
 
@@ -109,47 +117,47 @@ func (c *Controller[Dependency]) TriggerWorkflow(ctx context.Context, res *types
 	}
 
 	// Set timeouts
-	if spec.ExecutionTimeout.IsValid() {
-		if tout := spec.ExecutionTimeout.AsDuration(); tout > 0 {
+	if workTrigger.ExecutionTimeout.IsValid() {
+		if tout := workTrigger.ExecutionTimeout.AsDuration(); tout > 0 {
 			startOpts.WorkflowExecutionTimeout = tout
 		}
 	}
 
-	if spec.RunTimeout.IsValid() {
-		if tout := spec.RunTimeout.AsDuration(); tout > 0 {
+	if workTrigger.RunTimeout.IsValid() {
+		if tout := workTrigger.RunTimeout.AsDuration(); tout > 0 {
 			startOpts.WorkflowRunTimeout = tout
 		}
 	}
 
-	if spec.TaskTimeout.IsValid() {
-		if tout := spec.TaskTimeout.AsDuration(); tout > 0 {
+	if workTrigger.TaskTimeout.IsValid() {
+		if tout := workTrigger.TaskTimeout.AsDuration(); tout > 0 {
 			startOpts.WorkflowTaskTimeout = tout
 		}
 	}
 
 	// Set retry policy
-	if spec.RetryPolicy != nil {
+	if workTrigger.RetryPolicy != nil {
 
 		startOpts.RetryPolicy = &tmemporalsdk.RetryPolicy{}
 
-		if spec.RetryPolicy.InitialInterval.IsValid() {
-			if tout := spec.RetryPolicy.InitialInterval.AsDuration(); tout > 0 {
+		if workTrigger.RetryPolicy.InitialInterval.IsValid() {
+			if tout := workTrigger.RetryPolicy.InitialInterval.AsDuration(); tout > 0 {
 				startOpts.RetryPolicy.InitialInterval = tout
 			}
 		}
 
-		if spec.RetryPolicy.MaximumBackoff.IsValid() {
-			if tout := spec.RetryPolicy.MaximumBackoff.AsDuration(); tout > 0 {
+		if workTrigger.RetryPolicy.MaximumBackoff.IsValid() {
+			if tout := workTrigger.RetryPolicy.MaximumBackoff.AsDuration(); tout > 0 {
 				startOpts.RetryPolicy.MaximumInterval = tout
 			}
 		}
 
-		if spec.RetryPolicy.MaximumAttempts > 0 {
-			startOpts.RetryPolicy.MaximumAttempts = spec.RetryPolicy.MaximumAttempts
+		if workTrigger.RetryPolicy.MaximumAttempts > 0 {
+			startOpts.RetryPolicy.MaximumAttempts = workTrigger.RetryPolicy.MaximumAttempts
 		}
 
-		if spec.RetryPolicy.NonRetryableErrors != nil && len(spec.RetryPolicy.NonRetryableErrors) > 0 {
-			startOpts.RetryPolicy.NonRetryableErrorTypes = spec.RetryPolicy.NonRetryableErrors
+		if workTrigger.RetryPolicy.NonRetryableErrors != nil && len(workTrigger.RetryPolicy.NonRetryableErrors) > 0 {
+			startOpts.RetryPolicy.NonRetryableErrorTypes = workTrigger.RetryPolicy.NonRetryableErrors
 		}
 
 	}
@@ -157,11 +165,11 @@ func (c *Controller[Dependency]) TriggerWorkflow(ctx context.Context, res *types
 	// Build arguments slice
 	args := []interface{}{}
 
-	if argsList := spec.Arguments.GetListValue(); argsList != nil {
+	if argsList := workTrigger.Arguments.GetListValue(); argsList != nil {
 		args = argsList.AsSlice()
 	}
 
-	run, err := tempClient.ExecuteWorkflow(ctx, startOpts, spec.Name, args...)
+	run, err := tempClient.ExecuteWorkflow(ctx, startOpts, workTrigger.Name, args...)
 	if err != nil {
 		return err
 	}

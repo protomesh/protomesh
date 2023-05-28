@@ -5,9 +5,9 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
 	"github.com/BurntSushi/toml"
 	"github.com/tidwall/gjson"
+	"github.com/upper-institute/graviflow"
 	"gopkg.in/yaml.v3"
 )
 
@@ -56,7 +56,7 @@ func (f *fileSource) Load() error {
 
 		m := make(map[string]interface{})
 
-		_, err := toml.Decode(string(raw), m)
+		_, err := toml.Decode(string(raw), &m)
 		if err != nil {
 			return err
 		}
@@ -87,4 +87,8 @@ func (f *fileSource) Get(k string) graviflow.Config {
 
 	return emptyConfig()
 
+}
+
+func (f *fileSource) Has(k string) bool {
+	return f.config.Get(k).Exists()
 }

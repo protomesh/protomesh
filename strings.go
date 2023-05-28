@@ -1,8 +1,6 @@
 package graviflow
 
 import (
-	"bytes"
-
 	"github.com/iancoleman/strcase"
 )
 
@@ -10,10 +8,11 @@ type KeyCase string
 
 const (
 	SnakeCaseKey      KeyCase = "snake_case"
-	UpperSnakeCaseKey         = "SNAKE_CASE"
-	CamelCaseKey              = "camelCase"
-	UpperCamelCaseKey         = "CamelCase"
-	KebabCase                 = "kebab-case"
+	UpperSnakeCaseKey KeyCase = "SNAKE_CASE"
+	CamelCaseKey      KeyCase = "camelCase"
+	UpperCamelCaseKey KeyCase = "CamelCase"
+	KebabCase         KeyCase = "kebab-case"
+	JsonPathCase      KeyCase = "json.path"
 )
 
 func ConvertKeyCase(key string, to KeyCase) string {
@@ -29,18 +28,9 @@ func ConvertKeyCase(key string, to KeyCase) string {
 		return strcase.ToCamel(key)
 	case KebabCase:
 		return strcase.ToKebab(key)
+	case JsonPathCase:
+		return strcase.ToDelimited(key, '.')
 	}
 
 	return key
-}
-
-func PKCS5Padding(ciphertext []byte, blockSize int) []byte {
-	padding := blockSize - len(ciphertext)%blockSize
-	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(ciphertext, padtext...)
-}
-
-func PKCS5Trimming(encrypt []byte) []byte {
-	padding := encrypt[len(encrypt)-1]
-	return encrypt[:len(encrypt)-int(padding)]
 }

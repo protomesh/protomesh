@@ -3,9 +3,9 @@ package internal
 import (
 	"flag"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
-	"dev.azure.com/pomwm/pom-tech/graviflow/internal/config"
-	"dev.azure.com/pomwm/pom-tech/graviflow/internal/logging"
+	"github.com/upper-institute/graviflow"
+	"github.com/upper-institute/graviflow/internal/config"
+	"github.com/upper-institute/graviflow/internal/logging"
 )
 
 const (
@@ -20,19 +20,18 @@ func init() {
 	flag.String(graviflow.ConvertKeyCase(configFile_cfg, graviflow.KebabCase), "", "[string]\n\tPath to config file (JSON, TOML or YAML)\n")
 	flag.String(graviflow.ConvertKeyCase(logLevel_cfg, graviflow.KebabCase), "", "[string]\n\tLog level: debug, info or error\n")
 	flag.Bool(graviflow.ConvertKeyCase(logDev_cfg, graviflow.KebabCase), true, "[boolean]\n\tLog enhanced for development environment (no sampling)\n")
-	flag.Bool(graviflow.ConvertKeyCase(logJson_cfg, graviflow.KebabCase), true, "[boolean]\n\tLog in json format\n")
+	flag.Bool(graviflow.ConvertKeyCase(logJson_cfg, graviflow.KebabCase), false, "[boolean]\n\tLog in json format\n")
 
 }
 
-type app[Dependency any] struct {
-	dep Dependency
+type app struct {
 	cfg graviflow.ConfigSource
 
 	logBuilder *logging.LoggerBuilder
 	log        graviflow.Logger
 }
 
-func CreateApp[Dependency any](injector graviflow.DependencyInjector[Dependency], configurator *graviflow.Configurator[Dependency]) graviflow.App[Dependency] {
+func CreateApp[Dependency any](injector graviflow.DependencyInjector[Dependency], configurator *graviflow.Configurator[Dependency]) graviflow.App {
 
 	cfg := config.NewCompositeSource(
 		config.NewFlagSource(configurator.KeyCase, configurator.FlagSet),
@@ -69,8 +68,7 @@ func CreateApp[Dependency any](injector graviflow.DependencyInjector[Dependency]
 
 	log := logBuilder.Build()
 
-	appInstance := &app[Dependency]{
-		dep:        injector.Dependency(),
+	appInstance := &app{
 		cfg:        cfg,
 		logBuilder: logBuilder,
 		log:        log,
@@ -82,18 +80,14 @@ func CreateApp[Dependency any](injector graviflow.DependencyInjector[Dependency]
 
 }
 
-func (a *app[Dependency]) Config() graviflow.ConfigSource {
+func (a *app) Config() graviflow.ConfigSource {
 	return a.cfg
 }
 
-func (a *app[Dependency]) Log() graviflow.Logger {
+func (a *app) Log() graviflow.Logger {
 	return a.log
 }
 
-func (a *app[Dependency]) Dependency() Dependency {
-	return a.dep
-}
-
-func (a *app[Dependency]) Close() {
+func (a *app) Close() {
 	a.logBuilder.Sync()
 }

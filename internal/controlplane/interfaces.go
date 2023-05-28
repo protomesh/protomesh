@@ -1,7 +1,7 @@
 package controlplane
 
 import (
-	apiv1 "dev.azure.com/pomwm/pom-tech/graviflow/proto/api/v1"
+	apiv1 "github.com/upper-institute/graviflow/proto/api/v1"
 	"go.temporal.io/sdk/client"
 	"google.golang.org/grpc"
 )

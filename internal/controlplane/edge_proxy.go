@@ -3,8 +3,8 @@ package controlplane
 import (
 	"context"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
-	typesv1 "dev.azure.com/pomwm/pom-tech/graviflow/proto/api/types/v1"
+	"github.com/upper-institute/graviflow"
+	typesv1 "github.com/upper-institute/graviflow/proto/api/types/v1"
 )
 
 type EdgeProxyHandler interface {
@@ -17,7 +17,7 @@ type EdgeProxyDependency interface {
 }
 
 type EdgeProxy[Dependency EdgeProxyDependency] struct {
-	graviflow.AppInjector[Dependency]
+	*graviflow.AppInjector[Dependency]
 
 	SyncInterval           graviflow.Config `config:"sync.interval,duration" default:"60s" usage:"Interval between synchronization cycles"`
 	ResourceStoreNamespace graviflow.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`

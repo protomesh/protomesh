@@ -45,7 +45,6 @@ message DropBeforeResourcesResponse {
 
 message ListResourcesRequest {
 
-    int64 updated_since = 1;
     string namespace = 2;
     string nonce = 3;
 
@@ -56,6 +55,7 @@ message ListResourcesResponse {
     repeated graviflow.api.types.v1.Resource updated_resources = 1;
     repeated graviflow.api.types.v1.Resource dropped_resources = 2;
     string nonce = 3;
+    bool end_of_list = 4;
 
 }
 

@@ -2,6 +2,8 @@ package tls
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -13,13 +15,15 @@ import (
 	"net"
 	"time"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
+	"github.com/upper-institute/graviflow"
 )
 
 type KeyLoader[Dependency any] struct {
-	graviflow.AppInjector[Dependency]
+	*graviflow.AppInjector[Dependency]
 
 	KeysPath graviflow.Config `config:"path,str" usage:"Path to PEM encoded private key file"`
+
+	priv crypto.PrivateKey
 }
 
 func (k *KeyLoader[Dependency]) BuildPrivateKeys() []crypto.PrivateKey {
@@ -82,6 +86,10 @@ func (k *KeyLoader[Dependency]) BuildDefaultRSAPrivateKey() []crypto.PrivateKey 
 		return privs
 	}
 
+	if k.priv != nil {
+		return []crypto.PrivateKey{k.priv}
+	}
+
 	log := k.Log()
 
 	priv, err := rsa.GenerateKey(rand.Reader, 4096)
@@ -89,14 +97,17 @@ func (k *KeyLoader[Dependency]) BuildDefaultRSAPrivateKey() []crypto.PrivateKey 
 		log.Panic("Unable to generate temporary RSA private key", "error", err)
 	}
 
+	k.priv = priv
+
 	return []crypto.PrivateKey{priv}
 
 }
 
 type CertificateLoader[Dependency any] struct {
-	graviflow.AppInjector[Dependency]
+	*graviflow.AppInjector[Dependency]
 
 	CertificatePath graviflow.Config `config:"path" usage:"Path to PEM encoded certificate chain file"`
+	PrivateKey      *KeyLoader[any]  `config:"private.key,str" usage:"Private key to sign default certificate"`
 }
 
 func (c *CertificateLoader[Dependency]) BuildCertificates() []*x509.Certificate {
@@ -141,7 +152,22 @@ func (c *CertificateLoader[Dependency]) BuildCertificates() []*x509.Certificate 
 
 }
 
+func publicKey(priv any) any {
+	switch k := priv.(type) {
+	case *rsa.PrivateKey:
+		return &k.PublicKey
+	case *ecdsa.PrivateKey:
+		return &k.PublicKey
+	case ed25519.PrivateKey:
+		return k.Public().(ed25519.PublicKey)
+	default:
+		return nil
+	}
+}
+
 func (c *CertificateLoader[Dependency]) BuildDefaultCertificate() []*x509.Certificate {
+
+	log := c.Log()
 
 	certs := c.BuildCertificates()
 	if certs != nil && len(certs) > 0 {
@@ -167,20 +193,34 @@ func (c *CertificateLoader[Dependency]) BuildDefaultCertificate() []*x509.Certif
 		KeyUsage: x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageDataEncipherment,
 	}
 
-	return []*x509.Certificate{caCert}
+	privKeys := c.PrivateKey.BuildDefaultRSAPrivateKey()
+
+	privKey := privKeys[0]
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, caCert, caCert, publicKey(privKey), privKey)
+	if err != nil {
+		log.Panic("Error self signing certificate", "error", err)
+	}
+
+	selfSignedCert, err := x509.ParseCertificate(certBytes)
+	if err != nil {
+		log.Panic("Error parsing self signed certificate", "error", err)
+	}
+
+	log.Info("Default RSA certificate created")
+
+	return []*x509.Certificate{selfSignedCert}
 
 }
 
 type TlsCertificateLoader[Dependency any] struct {
-	graviflow.AppInjector[Dependency]
-
-	PrivateKey   *KeyLoader[Dependency]         `config:"private.key"`
+	*graviflow.AppInjector[Dependency]
 	Certificates *CertificateLoader[Dependency] `config:"certificates"`
 }
 
 func (t *TlsCertificateLoader[Dependency]) Build() *tls.Certificate {
 
-	privs := t.PrivateKey.BuildDefaultRSAPrivateKey()
+	privs := t.Certificates.PrivateKey.BuildDefaultRSAPrivateKey()
 	certs := t.Certificates.BuildDefaultCertificate()
 
 	tlsCert := &tls.Certificate{
@@ -202,7 +242,7 @@ func (t *TlsCertificateLoader[Dependency]) Build() *tls.Certificate {
 }
 
 type TlsBuilder[Dependency any] struct {
-	graviflow.AppInjector[Dependency]
+	*graviflow.AppInjector[Dependency]
 
 	Certificate *TlsCertificateLoader[Dependency] `config:"certificate"`
 	RootCAs     *CertificateLoader[Dependency]    `config:"root.cas"`
@@ -242,13 +282,13 @@ func (t *TlsBuilder[Dependency]) BuildConfig() *tls.Config {
 
 func (t *TlsBuilder[Dependency]) BuildListener() net.Listener {
 
-	log := t.App.Log()
+	log := t.Log()
 
-	if t.ListenerAddress == nil || t.ListenerAddress.IsSet() {
+	if t.ListenerAddress == nil || !t.ListenerAddress.IsSet() {
 		log.Panic("ListenerAddress must be set in TlsBuilder")
 	}
 
-	if t.Protocol == nil || t.Protocol.IsSet() {
+	if t.Protocol == nil || !t.Protocol.IsSet() {
 		log.Panic("Protocol must be set in TlsBuilder")
 	}
 
@@ -260,6 +300,8 @@ func (t *TlsBuilder[Dependency]) BuildListener() net.Listener {
 	if err != nil {
 		log.Panic("Failed to listen (tls) to address", "error", err, "address", addr)
 	}
+
+	log.Info("Listening for TLS connections", "protocol", proto, "address", addr)
 
 	return lis
 

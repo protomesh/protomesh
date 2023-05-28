@@ -3,21 +3,21 @@ package client
 import (
 	"crypto/x509"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
+	"github.com/upper-institute/graviflow"
 
-	tlsprovider "dev.azure.com/pomwm/pom-tech/graviflow/provider/tls"
+	tlsprovider "github.com/upper-institute/graviflow/provider/tls"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type GrpcClient[Dependency any] struct {
-	graviflow.AppInjector[Dependency]
+	*graviflow.AppInjector[Dependency]
 
-	*grpc.ClientConn
+	ClientConn *grpc.ClientConn
 
-	TlsBuilder *tlsprovider.CertificateLoader[Dependency] `config:"client.certificate"`
-	EnableTls  graviflow.Config                           `config:"client.enable.tls" default:"false" usage:"Enable mTLS from client-side"`
+	TlsBuilder *tlsprovider.CertificateLoader[any] `config:"client.certificate"`
+	EnableTls  graviflow.Config                    `config:"client.enable.tls" default:"false" usage:"Enable mTLS from client-side"`
 
 	ServerNameOverride graviflow.Config `config:"server.name.override,str" usage:"Server name used to verify the hostname returned by TLS handshake"`
 	ServerAddress      graviflow.Config `config:"server.address,str" usage:"gRPC server address to connect to"`
@@ -47,7 +47,7 @@ func (g *GrpcClient[Dependency]) Start() {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
-	clientConn, err := grpc.Dial(addr)
+	clientConn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		log.Panic("Error dialing gRPC server", "error", err, "address", addr)
 	}

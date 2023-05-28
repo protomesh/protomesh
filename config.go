@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 var (
@@ -30,9 +32,12 @@ type Config interface {
 type ConfigSource interface {
 	Load() error
 	Get(k string) Config
+	Has(k string) bool
 }
 
 type Configurator[T any] struct {
+	tw table.Writer
+
 	Print     bool
 	Source    ConfigSource
 	FlagSet   *flag.FlagSet
@@ -212,22 +217,36 @@ func (cb *Configurator[T]) ApplyFlags(keySet T) {
 func (cb *Configurator[T]) ApplyConfigs(keySet T) T {
 
 	v := reflect.ValueOf(keySet)
-	t := reflect.TypeOf(keySet)
+
+	if cb.Print {
+		cb.tw = table.NewWriter()
+		cb.tw.AppendHeader(table.Row{"Configuration key", "Type", "Value"})
+	}
 
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
 		panic("Can only fill configs of struct pointers")
 	}
 
 	e := v.Elem()
+	elType := e.Type()
 
 	configType := reflect.TypeOf((*Config)(nil)).Elem()
 
 	for i := 0; i < e.NumField(); i++ {
 
 		fieldVal := e.Field(i)
+
+		if !fieldVal.IsValid() {
+			continue
+		}
+
 		fieldType := fieldVal.Type()
 
-		typeVal := t.Field(i)
+		typeVal := elType.Field(i)
+
+		if !typeVal.IsExported() {
+			continue
+		}
 
 		key, _ := cb.getFieldNameAndType(typeVal)
 
@@ -235,15 +254,11 @@ func (cb *Configurator[T]) ApplyConfigs(keySet T) T {
 
 			cfg := cb.Source.Get(key)
 
-			if cb.Print {
-				fmt.Printf("---> %s\t=\t[%T]\t%v", key, cfg, cfg)
+			if cb.tw != nil {
+				cb.tw.AppendRow(table.Row{key, fmt.Sprintf("%T", cfg), fmt.Sprintf("%+v", cfg)})
 			}
 
 			fieldVal.Set(reflect.ValueOf(cfg))
-			continue
-		}
-
-		if !fieldVal.CanInterface() || fieldVal.IsNil() {
 			continue
 		}
 
@@ -253,10 +268,18 @@ func (cb *Configurator[T]) ApplyConfigs(keySet T) T {
 				FlagSet:   cb.FlagSet,
 				Prefix:    key,
 				Separator: cb.Separator,
+				Print:     false,
+				tw:        cb.tw,
 			}
+
 			fieldCb.ApplyConfigs(fieldVal.Interface())
 		}
 
+	}
+
+	if cb.Print {
+		fmt.Println("Configuration table:")
+		fmt.Println(cb.tw.Render())
 	}
 
 	return keySet

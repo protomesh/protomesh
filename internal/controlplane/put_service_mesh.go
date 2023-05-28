@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	typesv1 "dev.azure.com/pomwm/pom-tech/graviflow/proto/api/types/v1"
-	apiv1 "dev.azure.com/pomwm/pom-tech/graviflow/proto/api/v1"
+	typesv1 "github.com/upper-institute/graviflow/proto/api/types/v1"
+	apiv1 "github.com/upper-institute/graviflow/proto/api/v1"
 )
 
 func (c *Controller[Dependency]) PutServiceMeshNode(ctx context.Context, res *typesv1.Resource) error {

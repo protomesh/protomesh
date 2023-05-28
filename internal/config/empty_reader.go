@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
+	"github.com/upper-institute/graviflow"
 )
 
 type emptyReader bool

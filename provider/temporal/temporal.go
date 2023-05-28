@@ -1,13 +1,13 @@
 package temporal
 
 import (
-	"dev.azure.com/pomwm/pom-tech/graviflow"
+	"github.com/upper-institute/graviflow"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 )
 
 type TemporalBuilder[Dependency any] struct {
-	graviflow.AppInjector[Dependency]
+	*graviflow.AppInjector[Dependency]
 
 	Namespace graviflow.Config `config:"namespace,string" default:"default" usage:"Temporal namespace"`
 	HostPort  graviflow.Config `config:"address,string" default:"localhost:7233" usage:"Tempora server host:port"`

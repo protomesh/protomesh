@@ -4,14 +4,14 @@ import (
 	"context"
 	"strings"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
-	"dev.azure.com/pomwm/pom-tech/graviflow/internal/client"
-	"dev.azure.com/pomwm/pom-tech/graviflow/internal/controlplane"
-	"dev.azure.com/pomwm/pom-tech/graviflow/internal/server"
-	apiv1 "dev.azure.com/pomwm/pom-tech/graviflow/proto/api/v1"
-	awsprovider "dev.azure.com/pomwm/pom-tech/graviflow/provider/aws"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
+	"github.com/upper-institute/graviflow"
+	"github.com/upper-institute/graviflow/internal/client"
+	"github.com/upper-institute/graviflow/internal/controlplane"
+	"github.com/upper-institute/graviflow/internal/server"
+	apiv1 "github.com/upper-institute/graviflow/proto/api/v1"
+	awsprovider "github.com/upper-institute/graviflow/provider/aws"
 	"google.golang.org/grpc"
 )
 
@@ -21,74 +21,79 @@ const (
 	lambda_grpcProxyRouter grpcProxyRouter = "awslambda"
 )
 
-type proxyDeps interface {
+type ProxyDeps interface {
 	GetAwsConfig() aws.Config
 	GetGrpcServer() *grpc.Server
 	SetGrpcProxyRouter(router server.GrpcRouter)
 }
 
-type proxyInstance struct {
-	graviflow.AppInjector[proxyDeps]
+type ProxyInjector interface {
+	GetLambdaClient() *lambda.Client
+	GetResourceStoreClient() apiv1.ResourceStoreClient
+}
 
-	resourceStore       *client.GrpcClient[*controllerInstance] `config:"resource.store"`
+type ProxyInstance[D ProxyDeps] struct {
+	*graviflow.AppInjector[D]
+
+	ResourceStore       *client.GrpcClient[ProxyInjector] `config:"resource.store"`
 	resourceStoreClient apiv1.ResourceStoreClient
 
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	grpcProxyRouter graviflow.Config `config:"grpc.router,str" usage:"Which grpc proxy router to use"`
+	GrpcProxyRouter graviflow.Config `config:"grpc.router,str" usage:"Which grpc proxy router to use"`
 
-	edgeProxy      *controlplane.EdgeProxy[*proxyInstance] `config:"edge"`
+	EdgeProxy      *controlplane.EdgeProxy[ProxyInjector] `config:"edge"`
 	edgeProxyErrCh <-chan error
 
-	grpcLambdaRouter *awsprovider.GrpcLambdaRouter[*proxyInstance] `config:"grpc.to.lambda"`
+	GrpcLambdaRouter *awsprovider.GrpcLambdaRouter[ProxyInjector] `config:"grpc.to.lambda"`
 }
 
-func newProxyInstance() *proxyInstance {
-	return &proxyInstance{
-		resourceStore:    &client.GrpcClient[*controllerInstance]{},
-		edgeProxy:        &controlplane.EdgeProxy[*proxyInstance]{},
-		grpcLambdaRouter: &awsprovider.GrpcLambdaRouter[*proxyInstance]{},
+func NewProxyInstance[D ProxyDeps]() *ProxyInstance[D] {
+	return &ProxyInstance[D]{
+		ResourceStore:    &client.GrpcClient[ProxyInjector]{},
+		EdgeProxy:        &controlplane.EdgeProxy[ProxyInjector]{},
+		GrpcLambdaRouter: &awsprovider.GrpcLambdaRouter[ProxyInjector]{},
 	}
 }
 
-func (p *proxyInstance) GetLambdaClient() *lambda.Client {
+func (p *ProxyInstance[D]) GetLambdaClient() *lambda.Client {
 	return lambda.NewFromConfig(p.Dependency().GetAwsConfig())
 }
 
-func (p *proxyInstance) GetResourceStoreClient() apiv1.ResourceStoreClient {
+func (p *ProxyInstance[D]) GetResourceStoreClient() apiv1.ResourceStoreClient {
 	return p.resourceStoreClient
 }
 
-func (p *proxyInstance) Start() {
+func (p *ProxyInstance[D]) Start() {
 
 	p.ctx, p.cancel = context.WithCancel(context.TODO())
 
-	p.resourceStore.Start()
+	p.ResourceStore.Start()
 
-	p.resourceStoreClient = apiv1.NewResourceStoreClient(p.resourceStore.ClientConn)
+	p.resourceStoreClient = apiv1.NewResourceStoreClient(p.ResourceStore.ClientConn)
 
-	switch grpcProxyRouter(strings.ToLower(p.grpcProxyRouter.StringVal())) {
+	switch grpcProxyRouter(strings.ToLower(p.GrpcProxyRouter.StringVal())) {
 
 	case lambda_grpcProxyRouter:
 
-		p.grpcLambdaRouter.Initialize()
+		p.GrpcLambdaRouter.Initialize()
 
-		p.Dependency().SetGrpcProxyRouter(p.grpcLambdaRouter)
+		p.Dependency().SetGrpcProxyRouter(p.GrpcLambdaRouter)
 
-		p.edgeProxy.Initialize(p.grpcLambdaRouter)
+		p.EdgeProxy.Initialize(p.GrpcLambdaRouter)
 
 	}
 
-	p.edgeProxyErrCh = p.edgeProxy.Sync(p.ctx)
+	p.edgeProxyErrCh = p.EdgeProxy.Sync(p.ctx)
 }
 
-func (p *proxyInstance) Stop() {
+func (p *ProxyInstance[D]) Stop() {
 
 	p.cancel()
 
 	<-p.edgeProxyErrCh
 
-	p.resourceStore.Stop()
+	p.ResourceStore.Stop()
 
 }

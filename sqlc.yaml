@@ -1,0 +1,9 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "provider/postgres/query.sql"
+    schema: "provider/postgres/schema"
+    gen:
+      go:
+        package: "gen"
+        out: "provider/postgres/gen"

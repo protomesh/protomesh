@@ -2,7 +2,7 @@ version: v1
 managed:
   enabled: true
   go_package_prefix:
-    default: dev.azure.com/pomwm/pom-tech/graviflow/proto
+    default: github.com/upper-institute/graviflow/proto
 plugins:
   - name: go
     out: proto

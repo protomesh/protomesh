@@ -7,17 +7,17 @@ import (
 	"strings"
 	"time"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
-	"dev.azure.com/pomwm/pom-tech/graviflow/internal/config"
-	tlsprovider "dev.azure.com/pomwm/pom-tech/graviflow/provider/tls"
+	"github.com/upper-institute/graviflow"
+	"github.com/upper-institute/graviflow/internal/config"
+	tlsprovider "github.com/upper-institute/graviflow/provider/tls"
 )
 
 type HttpServer[Dependency any] struct {
-	graviflow.AppInjector[Dependency]
+	*graviflow.AppInjector[any]
 
-	*http.Server
+	Server *http.Server
 
-	TlsBuilder *tlsprovider.TlsBuilder[Dependency] `config:"tls"`
+	TlsBuilder *tlsprovider.TlsBuilder[any] `config:"tls"`
 
 	HttpHandler http.Handler
 	GrpcHandler http.Handler

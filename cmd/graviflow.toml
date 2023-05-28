@@ -11,6 +11,7 @@ level = "debug"
 [aws]
 
 enable.grpc.lambda.router = true
+dynamodb.endpoint.url = ""
 
 [grpc]
 

@@ -3,10 +3,11 @@ package config
 import (
 	"flag"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
+	"github.com/upper-institute/graviflow"
 )
 
 type FlagSet interface {
+	Visit(fn func(*flag.Flag))
 	VisitAll(fn func(*flag.Flag))
 }
 
@@ -14,6 +15,7 @@ type flagSource struct {
 	keyCase graviflow.KeyCase
 	flagSet FlagSet
 	configs map[string]graviflow.Config
+	onlySet map[string]bool
 }
 
 func NewFlagSource(keyCase graviflow.KeyCase, flagSet FlagSet) graviflow.ConfigSource {
@@ -21,10 +23,19 @@ func NewFlagSource(keyCase graviflow.KeyCase, flagSet FlagSet) graviflow.ConfigS
 		keyCase: keyCase,
 		flagSet: flagSet,
 		configs: make(map[string]graviflow.Config),
+		onlySet: make(map[string]bool),
 	}
 }
 
 func (f *flagSource) Load() error {
+
+	f.flagSet.Visit(func(fg *flag.Flag) {
+
+		key := graviflow.ConvertKeyCase(fg.Name, f.keyCase)
+
+		f.onlySet[key] = true
+
+	})
 
 	f.flagSet.VisitAll(func(fg *flag.Flag) {
 
@@ -48,6 +59,14 @@ func (f *flagSource) Get(k string) graviflow.Config {
 		return c
 	}
 
-	return nil
+	return emptyConfig()
+
+}
+
+func (f *flagSource) Has(k string) bool {
+
+	_, ok := f.onlySet[k]
+
+	return ok
 
 }

@@ -1,0 +1,47 @@
+enable.proxy = true
+
+enable.controller = false
+enable.server = false
+
+[log]
+
+dev = true
+json = false
+level = "debug"
+
+[aws]
+
+enable.grpc.lambda.router = true
+
+[grpc]
+
+server.enable.reflection = true
+
+[http]
+
+server.shutdown.timeout.duration = "2m"
+
+[http.server.tls]
+
+# certificate.certificates.path = ""
+# certificate.private.key.path = ""
+# insecure.skip.verify = true
+# root.cas.path = ""
+
+listener.address = "0.0.0.0:5770"
+protocol = "tcp"
+
+[proxy]
+
+grpc.router = "AwsLambda"
+
+[proxy.edge]
+
+resource.store.namespace = "proxy"
+sync.interval = "1m"
+
+[proxy.resource.store]
+
+client.certificate.path = ""
+client.enable.tls = false
+server.address = "graviflow-server:6680"

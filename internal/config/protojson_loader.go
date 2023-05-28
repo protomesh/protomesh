@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
 	"github.com/BurntSushi/toml"
+	"github.com/upper-institute/graviflow"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/yaml.v3"
 )

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
+	"github.com/upper-institute/graviflow"
 )
 
 type valReader struct {

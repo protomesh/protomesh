@@ -8,8 +8,8 @@ import (
 	"io"
 	"time"
 
-	typesv1 "dev.azure.com/pomwm/pom-tech/graviflow/proto/api/types/v1"
-	apiv1 "dev.azure.com/pomwm/pom-tech/graviflow/proto/api/v1"
+	typesv1 "github.com/upper-institute/graviflow/proto/api/types/v1"
+	apiv1 "github.com/upper-institute/graviflow/proto/api/v1"
 )
 
 func idFromServiceMeshNode(namespace string, node *typesv1.ServiceMesh_Node) string {
@@ -105,9 +105,8 @@ func (rss *ResourceStoreSynchronizer) Sync(ctx context.Context) <-chan error {
 				nonce := time.Now().Format(time.RFC3339)
 
 				err := listCli.Send(&apiv1.ListResourcesRequest{
-					UpdatedSince: rss.IndexCursor,
-					Namespace:    rss.Namespace,
-					Nonce:        nonce,
+					Namespace: rss.Namespace,
+					Nonce:     nonce,
 				})
 				if err != nil {
 					return err

@@ -1,8 +1,8 @@
 package server
 
 import (
-	"dev.azure.com/pomwm/pom-tech/graviflow"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/upper-institute/graviflow"
 
 	// "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	// grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -11,7 +11,7 @@ import (
 )
 
 type GrpcServer[Dependency any] struct {
-	graviflow.AppInjector[Dependency]
+	*graviflow.AppInjector[Dependency]
 
 	*grpc.Server
 
@@ -47,8 +47,24 @@ func (g *GrpcServer[Dependency]) Initialize() {
 
 	g.Server = grpc.NewServer(opts...)
 
+}
+
+func (g *GrpcServer[Dependency]) Start() {
+
+	log := g.Log()
+
 	if g.EnableReflection != nil && g.EnableReflection.BoolVal() {
+
 		reflection.Register(g.Server)
+
+		log.Info("Reflection registered on gRPC server")
+
 	}
+
+}
+
+func (g *GrpcServer[Dependency]) Stop() {
+
+	g.Server.Stop()
 
 }

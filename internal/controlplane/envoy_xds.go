@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
-	typesv1 "dev.azure.com/pomwm/pom-tech/graviflow/proto/api/types/v1"
 	clusterservice "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
 	discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	endpointservice "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
@@ -17,6 +15,8 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	"github.com/upper-institute/graviflow"
+	typesv1 "github.com/upper-institute/graviflow/proto/api/types/v1"
 	"golang.org/x/net/context"
 )
 
@@ -70,7 +70,7 @@ func (i *idNameMap) Delete(key string) string {
 }
 
 type EnvoyXds[Dependency EnvoyXdsDependency] struct {
-	graviflow.AppInjector[Dependency]
+	*graviflow.AppInjector[Dependency]
 
 	SyncInterval           graviflow.Config `config:"sync.interval,duration" default:"60s" usage:"Interval between synchronization cycles"`
 	ResourceStoreNamespace graviflow.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`

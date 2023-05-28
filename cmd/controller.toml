@@ -1,0 +1,25 @@
+enable.controller = true
+
+enable.proxy = false
+enable.server = false
+
+[log]
+
+dev = true
+json = false
+level = "debug"
+
+[controller]
+
+controls.worker.task.queue = "graviflow"
+
+[controller.resource.store]
+
+client.certificate.path = ""
+client.enable.tls = false
+server.address = "graviflow-server:6680"
+
+[temporal]
+
+address = "temporal:7233"
+namespace = "default"

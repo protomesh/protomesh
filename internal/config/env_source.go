@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"dev.azure.com/pomwm/pom-tech/graviflow"
+	"github.com/upper-institute/graviflow"
 )
 
 type envSource struct {
@@ -45,5 +45,13 @@ func (e *envSource) Get(k string) graviflow.Config {
 	}
 
 	return emptyConfig()
+
+}
+
+func (e *envSource) Has(k string) bool {
+
+	_, ok := e.configs[k]
+
+	return ok
 
 }
