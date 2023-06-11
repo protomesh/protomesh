@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package protomesh.types.v1;
+
+option go_package = "github.com/protomesh/protomesh/proto/api/types/v1;typesv1";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/duration.proto";
+import "terraform/annotations.proto";
+
+option (protomesh.terraform.file_schema) = {
+  import_map : [
+    {
+      key: "google.protobuf.Value"
+      value: "github.com/protomesh/protomesh/proto/protobuf;protomeshpb"
+    }
+  ]
+};
+
+
+message Trigger {
+  option (protomesh.terraform.message_schema) = {
+    generate : false
+  };
+
+  // Name of the workflow to trigger
+  string name = 1 [ (protomesh.terraform.field_schema) = {required : true} ];
+
+  // Task queue on temporal to send workflow tasks
+  string task_queue = 2;
+
+  string id_prefix = 3;
+
+  enum IDBuilder {
+    // Don't add suffix
+    ID_BUILDER_ONLY_PREFIX = 0;
+    // Generate a new random id each time
+    ID_BUILDER_RANDOM = 1;
+    // Generate a unique ID for this workflow
+    ID_BUILDER_UNIQUE = 2;
+  }
+
+  oneof id_suffix {
+    // Use this exact id for the workflow id
+    string exact_id_suffix = 4;
+    IDBuilder id_suffix_builder = 5;
+  }
+
+  enum IfRunningAction {
+    // Abort the current event to keep the running
+    IF_RUNNING_ABORT = 0;
+    // Cancel the running workflow and start the current event
+    IF_RUNNING_OVERLAP = 1;
+  }
+
+  oneof if_running { IfRunningAction if_running_action = 6; }
+
+  string cron_schedule = 7;
+
+  google.protobuf.Duration execution_timeout = 8;
+  google.protobuf.Duration run_timeout = 9;
+  google.protobuf.Duration task_timeout = 10;
+
+  google.protobuf.Value arguments = 11;
+
+  message RetryPolicy {
+    google.protobuf.Duration initial_interval = 1 [
+      (protomesh.terraform.field_schema) = {
+      required : true
+      default_value : {
+        string_value : "30s"
+      }
+    }
+    ];
+    google.protobuf.Duration maximum_backoff = 2;
+    int32 maximum_attempts = 3;
+    repeated string non_retryable_errors = 4;
+  }
+
+  RetryPolicy retry_policy = 12;
+
+  enum OnDropAction {
+    ON_DROP_DO_NOTHING = 0;
+    ON_DROP_CANCEL = 1;
+    ON_DROP_TERMINATE = 2;
+  }
+
+  oneof on_drop { OnDropAction on_drop_action = 13; }
+}

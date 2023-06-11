@@ -1,0 +1,225 @@
+syntax = "proto3";
+
+package protomesh.types.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/descriptor.proto";
+import "terraform/annotations.proto";
+
+option go_package = "github.com/protomesh/protomesh/proto/api/types/v1;typesv1";
+
+message NetworkingNode {
+  option (protomesh.terraform.message_schema) = {
+    is_resource : false
+    generate : true
+  };
+  
+  oneof networking_node {
+    HttpIngress http_ingress = 1;
+    Service service = 2;
+    RoutingPolicy routing_policy = 3;
+    AwsLambdaGrpc aws_lambda_grpc = 4;
+    InstanceSet instance_set = 5;
+  }
+}
+
+enum TransportProtocol {
+  TRANSPORT_PROTOCOL_UNDEFINED = 0;
+  TRANSPORT_PROTOCOL_TCP = 1;
+  TRANSPORT_PROTOCOL_UDP = 2;
+}
+
+enum ApplicationProtocol {
+  APPLICATION_PROTOCOL_UNDEFINED = 0;
+  APPLICATION_PROTOCOL_HTTP1 = 1;
+  APPLICATION_PROTOCOL_HTTP2 = 2;
+}
+
+message HttpFilter {
+  option (protomesh.terraform.message_schema) = {
+    is_resource : false
+    generate : true
+  };
+
+  message HealthCheck {
+    string path = 1
+        [ (protomesh.terraform.field_schema) = {required : true} ];
+  }
+
+  message Cors {}
+
+  message GrpcWeb {}
+
+  message JwtAuthn {
+
+    message ClaimToHeader {
+      string header_name = 1;
+      string claim_name = 2;
+    }
+
+    message RemoteJwks {
+      string http_uri = 1 [
+        (protomesh.terraform.field_schema) = {required : true}
+      ];
+
+      string cluster_name = 2 [
+        (protomesh.terraform.field_schema) = {required : true}
+      ];
+
+      google.protobuf.Duration timeout = 3;
+    }
+
+    message FromHeader {
+      string header_name = 1 [
+        (protomesh.terraform.field_schema) = {required : true}
+      ];
+
+      string value_prefix = 2 [
+        (protomesh.terraform.field_schema) = {required : true}
+      ];
+    }
+
+    message Provider {
+      string provider_name = 1 [
+        (protomesh.terraform.field_schema) = {required : true}
+      ];
+
+      bool forward = 2 [
+        (protomesh.terraform.field_schema) = {required : true}
+      ];
+
+      string issuer = 3 [
+        (protomesh.terraform.field_schema) = {required : true}
+      ];
+
+      repeated string audiences = 4;
+      RemoteJwks remote_jwks = 5;
+      repeated ClaimToHeader claim_to_headers = 6;
+      repeated FromHeader from_headers = 7;
+    }
+
+    message Rule {
+      string match_prefix = 1;
+      repeated string required_providers_names = 2;
+    }
+
+    repeated Provider providers = 1;
+    repeated Rule rules = 2;
+  }
+
+  oneof filter {
+    Cors cors = 1;
+    HealthCheck health_check = 2;
+    GrpcWeb grpc_web = 3;
+    JwtAuthn jwt_authn = 4;
+  }
+}
+
+// HttpIngress represents an ingress proxy
+message HttpIngress {
+  option (protomesh.terraform.message_schema) = {
+    is_resource : false
+    generate : true
+  };
+
+  // XDS cluster name: must be the same of the envoy config to be matched by
+  // xDS server
+  string xds_cluster_name = 1;
+  // Ingress name (used as route config name for the route specifier)
+  string ingress_name = 2;
+  // Ingress port to listen for incoming requests
+  int32 listen_port = 3;
+  // Http filters to apply to the ingress listener
+  repeated HttpFilter http_filters = 4;
+}
+
+message InstanceSet {
+  option (protomesh.terraform.message_schema) = {
+    is_resource : false
+    generate : true
+  };
+
+  message Instance {
+    // Unique identifier for this instance
+    string hostname = 1;
+    TransportProtocol transport_protocol = 2;
+    string address = 3;
+    int32 port = 4;
+
+    string region = 5;
+    string zone = 6;
+  }
+
+  repeated Instance instances = 1;
+
+  repeated string match_service_names = 2;
+}
+
+// Service represents a downstream target for envoy (Cluster)
+message Service {
+  option (protomesh.terraform.message_schema) = {
+    is_resource : false
+    generate : true
+  };
+
+  message Http1Options {}
+
+  message Http2Options { int32 max_concurrent_streams = 1; }
+
+  // XDS cluster name: must be the same of the envoy config to be matched by
+  // xDS server
+  string xds_cluster_name = 2;
+  string service_name = 1;
+
+  google.protobuf.Duration connect_timeout = 3;
+
+  oneof instance_application_protocol_options {
+    Http1Options instance_http1_options = 4;
+    Http2Options instance_http2_options = 5;
+  }
+}
+
+// Represents a routing policy for the control plane (Envoy Virtual Host)
+message RoutingPolicy {
+  option (protomesh.terraform.message_schema) = {
+    is_resource : false
+    generate : true
+  };
+
+  string ingress_name = 1;
+
+  message Route {
+    string match_prefix = 1;
+    string target_service = 2;
+    google.protobuf.Duration timeout = 3;
+  }
+
+  repeated Route routes = 2;
+
+  message Cors {
+    repeated string allow_origin_string_match_prefix = 1;
+    repeated string allow_methods = 2;
+    repeated string allow_headers = 3;
+    repeated string expose_headers = 4;
+    google.protobuf.Duration max_age = 5;
+  }
+
+  Cors cors = 3;
+
+  // XDS cluster name: must be the same of the envoy config to be matched by
+  // xDS server
+  string xds_cluster_name = 4;
+
+  string domain = 5;
+}
+
+message AwsLambdaGrpc {
+  option (protomesh.terraform.message_schema) = {
+    is_resource : false
+    generate : true
+  };
+  
+  string full_method_name = 1;
+  string function_name = 2;
+  string qualifier = 3;
+}

@@ -35,7 +35,7 @@ protocol = "tcp"
 
 grpc.router = "AwsLambda"
 
-[proxy.edge]
+[proxy.service]
 
 resource.store.namespace = "proxy"
 sync.interval = "1m"
@@ -43,5 +43,5 @@ sync.interval = "1m"
 [proxy.resource.store]
 
 client.certificate.path = ""
-client.enable.tls = false
-server.address = "graviflow-server:6680"
+client.enable.tls = true
+server.address = "server:6680"

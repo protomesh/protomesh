@@ -55,6 +55,43 @@ func (q *Queries) DropResourceCacheBefore(ctx context.Context, arg DropResourceC
 	return err
 }
 
+const getResourceCache = `-- name: GetResourceCache :one
+SELECT
+    rc.version_index,
+    rc.name,
+    rc.spec_type_url,
+    rc.spec_value,
+    rc.sha256_hash
+FROM resource_cache AS rc
+WHERE rc.namespace = $1::TEXT AND rc.id = $2::UUID
+`
+
+type GetResourceCacheParams struct {
+	Namespace string
+	ID        uuid.UUID
+}
+
+type GetResourceCacheRow struct {
+	VersionIndex int64
+	Name         string
+	SpecTypeUrl  string
+	SpecValue    []byte
+	Sha256Hash   string
+}
+
+func (q *Queries) GetResourceCache(ctx context.Context, arg GetResourceCacheParams) (GetResourceCacheRow, error) {
+	row := q.db.QueryRowContext(ctx, getResourceCache, arg.Namespace, arg.ID)
+	var i GetResourceCacheRow
+	err := row.Scan(
+		&i.VersionIndex,
+		&i.Name,
+		&i.SpecTypeUrl,
+		&i.SpecValue,
+		&i.Sha256Hash,
+	)
+	return i, err
+}
+
 const getResourceCacheSummary = `-- name: GetResourceCacheSummary :one
 SELECT
     version_index,

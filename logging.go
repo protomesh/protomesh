@@ -1,4 +1,4 @@
-package graviflow
+package protomesh
 
 type Logger interface {
 	Debug(message string, kv ...interface{})
@@ -6,5 +6,5 @@ type Logger interface {
 	Warn(message string, kv ...interface{})
 	Error(message string, kv ...interface{})
 	Panic(message string, kv ...interface{})
-	Child(name string) Logger
+	With(kv ...interface{}) Logger
 }

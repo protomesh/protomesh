@@ -15,13 +15,13 @@ import (
 	"net"
 	"time"
 
-	"github.com/upper-institute/graviflow"
+	"github.com/protomesh/protomesh"
 )
 
 type KeyLoader[Dependency any] struct {
-	*graviflow.AppInjector[Dependency]
+	*protomesh.Injector[Dependency]
 
-	KeysPath graviflow.Config `config:"path,str" usage:"Path to PEM encoded private key file"`
+	KeysPath protomesh.Config `config:"path,str" usage:"Path to PEM encoded private key file"`
 
 	priv crypto.PrivateKey
 }
@@ -104,9 +104,9 @@ func (k *KeyLoader[Dependency]) BuildDefaultRSAPrivateKey() []crypto.PrivateKey 
 }
 
 type CertificateLoader[Dependency any] struct {
-	*graviflow.AppInjector[Dependency]
+	*protomesh.Injector[Dependency]
 
-	CertificatePath graviflow.Config `config:"path" usage:"Path to PEM encoded certificate chain file"`
+	CertificatePath protomesh.Config `config:"path" usage:"Path to PEM encoded certificate chain file"`
 	PrivateKey      *KeyLoader[any]  `config:"private.key,str" usage:"Private key to sign default certificate"`
 }
 
@@ -214,7 +214,7 @@ func (c *CertificateLoader[Dependency]) BuildDefaultCertificate() []*x509.Certif
 }
 
 type TlsCertificateLoader[Dependency any] struct {
-	*graviflow.AppInjector[Dependency]
+	*protomesh.Injector[Dependency]
 	Certificates *CertificateLoader[Dependency] `config:"certificates"`
 }
 
@@ -242,15 +242,15 @@ func (t *TlsCertificateLoader[Dependency]) Build() *tls.Certificate {
 }
 
 type TlsBuilder[Dependency any] struct {
-	*graviflow.AppInjector[Dependency]
+	*protomesh.Injector[Dependency]
 
 	Certificate *TlsCertificateLoader[Dependency] `config:"certificate"`
 	RootCAs     *CertificateLoader[Dependency]    `config:"root.cas"`
 
-	InsecureSkipVerify graviflow.Config `config:"insecure.skip.verify,bool" default:"false" usage:"Skip server name verification against certificate chain"`
+	InsecureSkipVerify protomesh.Config `config:"insecure.skip.verify,bool" default:"false" usage:"Skip server name verification against certificate chain"`
 
-	ListenerAddress graviflow.Config `config:"listener.address,string" usage:"TLS listener address"`
-	Protocol        graviflow.Config `config:"protocol,string" default:"tcp" usage:"Protocol to accept in the TLS listener"`
+	ListenerAddress protomesh.Config `config:"listener.address,string" usage:"TLS listener address"`
+	Protocol        protomesh.Config `config:"protocol,string" default:"tcp" usage:"Protocol to accept in the TLS listener"`
 }
 
 func (t *TlsBuilder[Dependency]) BuildConfig() *tls.Config {

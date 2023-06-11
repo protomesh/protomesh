@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package protomesh.services.v1;
+
+option go_package = "github.com/protomesh/protomesh/proto/api/services/v1;servicesv1";
+
+import "api/types/v1/version.proto";
+import "api/types/v1/resource.proto";
+
+message PutResourceRequest {
+
+    protomesh.types.v1.Resource resource = 1;
+
+}
+
+message PutResourceResponse {
+
+    protomesh.types.v1.Version version = 1;
+
+}
+
+message DropResourcesRequest {
+
+    // Resource IDs to drop
+    repeated string resource_ids = 1;
+    string namespace = 2;
+
+}
+
+message DropResourcesResponse {
+
+}
+
+message GetResourceRequest {
+
+    string namespace = 1;
+    string resource_id = 2;
+
+}
+
+
+message GetResourceResponse {
+
+    protomesh.types.v1.Resource resource = 1;
+
+}
+
+message WatchResourcesRequest {
+
+    string namespace = 1;
+
+}
+
+message WatchResourcesResponse {
+
+    repeated protomesh.types.v1.Resource updated_resources = 1;
+    repeated protomesh.types.v1.Resource dropped_resources = 2;
+    bool end_of_list = 3;
+
+}
+
+service ResourceStore {
+    rpc Put(PutResourceRequest) returns(PutResourceResponse) {}
+    rpc Drop(DropResourcesRequest) returns(DropResourcesResponse) {}
+    rpc Get(GetResourceRequest) returns(GetResourceResponse) {}
+    rpc Watch(WatchResourcesRequest) returns(stream WatchResourcesResponse) {}
+}

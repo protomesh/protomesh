@@ -1,0 +1,25 @@
+[workflowTrigger]
+
+taskQueue = "graviflow"
+
+name = "aws_SyncS3Resources"
+
+idPrefix = "sync-graviflow-resources"
+exactIdSuffix = "-from-s3"
+
+ifRunningAction = "IF_RUNNING_ABORT"
+
+executionTimeout = "86400s"
+runTimeout = "300s"
+taskTimeout = "15s"
+
+[workflowTrigger.retryPolicy]
+
+initialInterval = "30s"
+maximumAttempts = 300
+
+[[workflowTrigger.arguments]]
+
+bucketName = "graviflow-resources"
+keyPrefix = "examples/"
+interval = "60s"

@@ -21,7 +21,7 @@ type ListServicesFromCloudMapResponse struct {
 
 func (as *AutomationSet[Dependency]) ListServicesFromCloudMap(ctx context.Context, req *ListServicesFromCloudMapRequest) (*ListServicesFromCloudMapResponse, error) {
 
-	sdCli := as.Dependency().GetServiceDiscoveryClient()
+	sdCli := as.Dependency().GetAwsServiceDiscoveryClient()
 
 	listNamespacesInput := &servicediscovery.ListNamespacesInput{
 		Filters: []types.NamespaceFilter{
@@ -122,7 +122,7 @@ type ListInstancesFromCloudMapServiceResponse struct {
 
 func (as *AutomationSet[Dependency]) ListInstancesFromCloudMapService(ctx context.Context, req *ListInstancesFromCloudMapServiceRequest) (*ListInstancesFromCloudMapServiceResponse, error) {
 
-	sdCli := as.Dependency().GetServiceDiscoveryClient()
+	sdCli := as.Dependency().GetAwsServiceDiscoveryClient()
 
 	listInstancesPages := servicediscovery.NewListInstancesPaginator(sdCli, &servicediscovery.ListInstancesInput{
 		ServiceId: aws.String(req.ServiceId),

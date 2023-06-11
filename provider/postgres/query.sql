@@ -107,6 +107,16 @@ SELECT
     sha256_hash
 FROM resource_cache AS rc WHERE rc.namespace = @namespace::TEXT AND rc.id = @id::UUID;
 
+-- name: GetResourceCache :one
+SELECT
+    rc.version_index,
+    rc.name,
+    rc.spec_type_url,
+    rc.spec_value,
+    rc.sha256_hash
+FROM resource_cache AS rc
+WHERE rc.namespace = @namespace::TEXT AND rc.id = @id::UUID;
+
 -- name: MaxVersionIndexForNamespace :one
 SELECT
     id,

@@ -2,239 +2,123 @@ package aws
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
-	"io"
-	"net/http"
-	"strings"
 	"sync"
 
-	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
-	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
-	"github.com/upper-institute/graviflow"
-	"github.com/upper-institute/graviflow/internal/server"
-	typesv1 "github.com/upper-institute/graviflow/proto/api/types/v1"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
+	"github.com/protomesh/protomesh"
+	"github.com/protomesh/protomesh/pkg/server"
+	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
 )
 
-type grpcLambdaMethodHandler struct {
-	*grpcLambdaMethod
-
-	ctx     context.Context
-	headers map[string]string
-	result  []byte
-}
-
-func (gmh *grpcLambdaMethodHandler) Call(payload []byte) (metadata.MD, error) {
-
-	req := &events.APIGatewayProxyRequest{
-		Path:            gmh.fullMethodName,
-		Headers:         gmh.headers,
-		Body:            string(payload[:]),
-		IsBase64Encoded: true,
-	}
-
-	in, err := json.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
-
-	out, err := gmh.lambdaClient.Invoke(gmh.ctx, &lambda.InvokeInput{
-		FunctionName:   gmh.functionName,
-		InvocationType: types.InvocationTypeRequestResponse,
-		Qualifier:      gmh.qualifier,
-		Payload:        in,
-	})
-
-	res := &events.APIGatewayProxyResponse{}
-	if err := json.Unmarshal(out.Payload, res); err != nil {
-		return nil, err
-	}
-
-	outMd := metadata.New(res.Headers)
-
-	switch res.StatusCode {
-
-	case http.StatusGone:
-		return outMd, status.Error(codes.Aborted, res.Body)
-
-	case http.StatusBadRequest:
-		return outMd, status.Error(codes.InvalidArgument, res.Body)
-
-	case http.StatusPreconditionFailed:
-		return outMd, status.Error(codes.FailedPrecondition, res.Body)
-
-	case http.StatusNotFound:
-		return outMd, status.Error(codes.NotFound, res.Body)
-
-	case http.StatusNotImplemented:
-		return outMd, status.Error(codes.Unimplemented, res.Body)
-
-	case http.StatusInternalServerError:
-		return outMd, status.Error(codes.Internal, res.Body)
-
-	case http.StatusGatewayTimeout:
-		return outMd, status.Error(codes.DeadlineExceeded, res.Body)
-
-	case http.StatusNoContent:
-		return outMd, status.Error(codes.OutOfRange, res.Body)
-
-	case http.StatusTooManyRequests:
-		return outMd, status.Error(codes.ResourceExhausted, res.Body)
-
-	case http.StatusServiceUnavailable:
-		return outMd, status.Error(codes.Unavailable, res.Body)
-
-	case http.StatusConflict:
-		return outMd, status.Error(codes.AlreadyExists, res.Body)
-
-	case http.StatusForbidden:
-		return outMd, status.Error(codes.Unauthenticated, res.Body)
-
-	case http.StatusInsufficientStorage:
-		return outMd, status.Error(codes.DataLoss, res.Body)
-
-	case http.StatusUnauthorized:
-		return outMd, status.Error(codes.PermissionDenied, res.Body)
-
-	}
-
-	if res.IsBase64Encoded {
-
-		result, err := base64.RawStdEncoding.DecodeString(res.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		gmh.result = result
-
-	} else {
-		gmh.result = []byte(res.Body)
-	}
-
-	return outMd, io.EOF
-
-}
-
-func (gmh *grpcLambdaMethodHandler) Result() ([]byte, error) {
-
-	return gmh.result, io.EOF
-
-}
-
-type grpcLambdaMethod struct {
-	fullMethodName string
-	functionName   *string
-	qualifier      *string
-	lambdaClient   *lambda.Client
-}
-
-func (glm *grpcLambdaMethod) Handle(ctx context.Context) (server.GrpcMethodHandler, error) {
-
-	gmh := &grpcLambdaMethodHandler{
-		ctx:              ctx,
-		headers:          make(map[string]string),
-		grpcLambdaMethod: glm,
-	}
-
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-
-		for key, vals := range md {
-			gmh.headers[key] = strings.Join(vals, ",")
-		}
-
-	}
-
-	return gmh, nil
-
-}
-
 type GrpcLambdaRouterDependency interface {
-	LambdaProvider
+	GetLambdaClient() *lambda.Client
 }
 
-type GrpcLambdaRouter[Dependency GrpcLambdaRouterDependency] struct {
-	graviflow.AppInjector[Dependency]
+type GrpcLambdaRouter[D GrpcLambdaRouterDependency] struct {
+	*protomesh.Injector[D]
 
-	methods map[string]*grpcLambdaMethod
+	methods map[string]grpcLambdaMethodBuilder
 
 	rwLock *sync.RWMutex
 }
 
-func (glr *GrpcLambdaRouter[Dependency]) Initialize() {
-	glr.methods = make(map[string]*grpcLambdaMethod)
+func (glr *GrpcLambdaRouter[D]) Initialize() {
+	glr.methods = make(map[string]grpcLambdaMethodBuilder)
 	glr.rwLock = new(sync.RWMutex)
 }
 
-func (glr *GrpcLambdaRouter[Dependency]) GetMethod(fullMethodName string) server.GrpcMethod {
+// GetMethod returns a GrpcMethodHandler.
+// It's the right place to implement things like A/B testing, traffic spliting and other routing strategies.
+func (glr *GrpcLambdaRouter[D]) GetMethod(ctx context.Context, callInfo *server.GrpcCallInformation) server.GrpcMethodHandler {
+
+	log := glr.Log()
 
 	glr.rwLock.RLock()
 	defer glr.rwLock.RUnlock()
 
-	method, ok := glr.methods[fullMethodName]
+	log.Debug("Call to gRPC method backed by a Lambda", "fullMethodName", callInfo.FullMethodName)
+
+	methodBuilder, ok := glr.methods[callInfo.FullMethodName]
 	if ok {
-		return method
+		return methodBuilder(ctx)
 	}
 
 	return nil
 
 }
 
-func (glr *GrpcLambdaRouter[Dependency]) PutEdge(ctx context.Context, edge *typesv1.ServiceMesh_Edge) error {
+func (glr *GrpcLambdaRouter[D]) ProcessNodes(ctx context.Context, updated []*typesv1.NetworkingNode, dropped []*typesv1.NetworkingNode) error {
 
-	route, ok := edge.Edge.(*typesv1.ServiceMesh_Edge_AwsLambdaGrpcEdge)
+	for _, node := range updated {
+		if err := glr.UpdateNode(ctx, node); err != nil {
+			return err
+		}
+	}
+
+	for _, node := range dropped {
+		if err := glr.DropNode(ctx, node); err != nil {
+			return err
+		}
+	}
+
+	return nil
+
+}
+
+func (glr *GrpcLambdaRouter[D]) UpdateNode(ctx context.Context, node *typesv1.NetworkingNode) error {
+
+	log := glr.Log()
+
+	route, ok := node.NetworkingNode.(*typesv1.NetworkingNode_AwsLambdaGrpc)
 	if !ok {
 		return nil
 	}
 
-	glr.registerMethod(
-		route.AwsLambdaGrpcEdge.FullMethodName,
-		route.AwsLambdaGrpcEdge.FunctionName,
-		route.AwsLambdaGrpcEdge.Qualifier,
+	glr.registerMethod(route.AwsLambdaGrpc)
+
+	log.Debug(
+		"New edge added to gRPC Lambda Router",
+		"fullMethodName", route.AwsLambdaGrpc.FullMethodName,
+		"functionName", route.AwsLambdaGrpc.FunctionName,
+		"qualififer", route.AwsLambdaGrpc.Qualifier,
 	)
 
 	return nil
 
 }
 
-func (glr *GrpcLambdaRouter[Dependency]) registerMethod(fullMethodName string, functionName string, qualifier string) {
+func (glr *GrpcLambdaRouter[D]) registerMethod(route *typesv1.AwsLambdaGrpc) {
+
+	methodBuilder := newGrpcLambdaMethodBuilder(route, glr.Dependency().GetLambdaClient())
 
 	glr.rwLock.Lock()
 	defer glr.rwLock.Unlock()
 
-	method := &grpcLambdaMethod{
-		fullMethodName: fullMethodName,
-		functionName:   aws.String(functionName),
-		lambdaClient:   glr.Dependency().GetLambdaClient(),
-	}
-
-	if len(qualifier) > 0 {
-		method.qualifier = aws.String(qualifier)
-	}
-
-	glr.methods[fullMethodName] = method
+	glr.methods[route.FullMethodName] = methodBuilder
 
 }
 
-func (glr *GrpcLambdaRouter[Dependency]) DropEdge(ctx context.Context, edge *typesv1.ServiceMesh_Edge) error {
+func (glr *GrpcLambdaRouter[D]) DropNode(ctx context.Context, node *typesv1.NetworkingNode) error {
 
-	route, ok := edge.Edge.(*typesv1.ServiceMesh_Edge_AwsLambdaGrpcEdge)
+	log := glr.Log()
+
+	route, ok := node.NetworkingNode.(*typesv1.NetworkingNode_AwsLambdaGrpc)
 	if !ok {
 		return nil
 	}
 
-	glr.unregisterMethod(route.AwsLambdaGrpcEdge.FullMethodName)
+	glr.unregisterMethod(route.AwsLambdaGrpc.FullMethodName)
+
+	log.Debug(
+		"Removed node from gRPC Lambda Router",
+		"fullMethodName", route.AwsLambdaGrpc.FullMethodName,
+	)
 
 	return nil
 
 }
 
-func (glr *GrpcLambdaRouter[Dependency]) unregisterMethod(fullMethodName string) {
+func (glr *GrpcLambdaRouter[D]) unregisterMethod(fullMethodName string) {
 
 	glr.rwLock.Lock()
 	defer glr.rwLock.Unlock()

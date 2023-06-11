@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package protomesh.services.v1;
+
+option go_package = "github.com/protomesh/protomesh/proto/api/services/v1;servicesv1";
+
+message Ping {
+
+    string nonce = 1;
+
+}
+
+message Pong {
+
+    string sha256_sum = 1;
+
+}
+
+service PingPongService {
+    rpc DoPing(Ping) returns(Pong) {}
+}

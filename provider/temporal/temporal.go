@@ -1,18 +1,18 @@
 package temporal
 
 import (
-	"github.com/upper-institute/graviflow"
+	"github.com/protomesh/protomesh"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 )
 
 type TemporalBuilder[Dependency any] struct {
-	*graviflow.AppInjector[Dependency]
+	*protomesh.Injector[Dependency]
 
-	Namespace graviflow.Config `config:"namespace,string" default:"default" usage:"Temporal namespace"`
-	HostPort  graviflow.Config `config:"address,string" default:"localhost:7233" usage:"Tempora server host:port"`
-	// AesCodecKey    graviflow.Config `config:"aes.codec.key,string" usage:"Temporal AES codec key"`
-	// AesCodecIvSeed graviflow.Config `config:"aes.iv.seed,int64" usage:"Temporal AES codec IV rand seed"`
+	Namespace protomesh.Config `config:"namespace,string" default:"default" usage:"Temporal namespace"`
+	HostPort  protomesh.Config `config:"address,string" default:"localhost:7233" usage:"Tempora server host:port"`
+	// AesCodecKey    protomesh.Config `config:"aes.codec.key,string" usage:"Temporal AES codec key"`
+	// AesCodecIvSeed protomesh.Config `config:"aes.iv.seed,int64" usage:"Temporal AES codec IV rand seed"`
 }
 
 func (t *TemporalBuilder[Dependency]) GetTemporalClient() client.Client {
@@ -27,8 +27,7 @@ func (t *TemporalBuilder[Dependency]) GetTemporalClient() client.Client {
 	dataConv := converter.NewCompositeDataConverter(
 		converter.NewNilPayloadConverter(),
 		converter.NewByteSlicePayloadConverter(),
-		converter.NewProtoJSONPayloadConverter(),
-		converter.NewJSONPayloadConverter(),
+		NewProtoJSONPayloadConverter(),
 	)
 
 	// if t.AesCodecKey.IsSet() {
@@ -94,7 +93,7 @@ func (t *TemporalBuilder[Dependency]) GetTemporalClient() client.Client {
 // 			return payloads, err
 // 		}
 
-// 		raw = graviflow.PKCS5Padding(raw, mode.BlockSize())
+// 		raw = protomesh.PKCS5Padding(raw, mode.BlockSize())
 
 // 		encrypted := make([]byte, len(raw))
 
@@ -130,7 +129,7 @@ func (t *TemporalBuilder[Dependency]) GetTemporalClient() client.Client {
 
 // 		mode.CryptBlocks(decrypted, p.Data)
 
-// 		raw := graviflow.PKCS5Trimming(decrypted)
+// 		raw := protomesh.PKCS5Trimming(decrypted)
 
 // 		result[i] = &commonpb.Payload{}
 // 		err := proto.Unmarshal(raw, result[i])

@@ -6,12 +6,12 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
-	"github.com/upper-institute/graviflow"
-	"github.com/upper-institute/graviflow/internal/client"
-	"github.com/upper-institute/graviflow/internal/controlplane"
-	"github.com/upper-institute/graviflow/internal/server"
-	apiv1 "github.com/upper-institute/graviflow/proto/api/v1"
-	awsprovider "github.com/upper-institute/graviflow/provider/aws"
+	"github.com/protomesh/protomesh"
+	"github.com/protomesh/protomesh/pkg/client"
+	"github.com/protomesh/protomesh/pkg/proxy"
+	"github.com/protomesh/protomesh/pkg/server"
+	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
+	awsprovider "github.com/protomesh/protomesh/provider/aws"
 	"google.golang.org/grpc"
 )
 
@@ -29,30 +29,34 @@ type ProxyDeps interface {
 
 type ProxyInjector interface {
 	GetLambdaClient() *lambda.Client
-	GetResourceStoreClient() apiv1.ResourceStoreClient
+	GetResourceStoreClient() servicesv1.ResourceStoreClient
+
+	Initialize()
+	Start()
+	Stop()
 }
 
 type ProxyInstance[D ProxyDeps] struct {
-	*graviflow.AppInjector[D]
+	*protomesh.Injector[D]
 
 	ResourceStore       *client.GrpcClient[ProxyInjector] `config:"resource.store"`
-	resourceStoreClient apiv1.ResourceStoreClient
+	resourceStoreClient servicesv1.ResourceStoreClient
 
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	GrpcProxyRouter graviflow.Config `config:"grpc.router,str" usage:"Which grpc proxy router to use"`
+	GrpcProxyRouter protomesh.Config `config:"grpc.router,str" usage:"Which grpc proxy router to use"`
 
-	EdgeProxy      *controlplane.EdgeProxy[ProxyInjector] `config:"edge"`
+	Proxy          *proxy.Proxy[ProxyInjector] `config:"service"`
 	edgeProxyErrCh <-chan error
 
 	GrpcLambdaRouter *awsprovider.GrpcLambdaRouter[ProxyInjector] `config:"grpc.to.lambda"`
 }
 
-func NewProxyInstance[D ProxyDeps]() *ProxyInstance[D] {
+func NewProxyInstance[D ProxyDeps]() ProxyInjector {
 	return &ProxyInstance[D]{
 		ResourceStore:    &client.GrpcClient[ProxyInjector]{},
-		EdgeProxy:        &controlplane.EdgeProxy[ProxyInjector]{},
+		Proxy:            &proxy.Proxy[ProxyInjector]{},
 		GrpcLambdaRouter: &awsprovider.GrpcLambdaRouter[ProxyInjector]{},
 	}
 }
@@ -61,8 +65,38 @@ func (p *ProxyInstance[D]) GetLambdaClient() *lambda.Client {
 	return lambda.NewFromConfig(p.Dependency().GetAwsConfig())
 }
 
-func (p *ProxyInstance[D]) GetResourceStoreClient() apiv1.ResourceStoreClient {
+func (p *ProxyInstance[D]) GetResourceStoreClient() servicesv1.ResourceStoreClient {
 	return p.resourceStoreClient
+}
+
+func (p *ProxyInstance[D]) Initialize() {
+
+	log := p.Log()
+
+	compRouter := server.NewCompositeGrpcRouter()
+	handlers := []proxy.ProxyHandler{}
+
+	grpcProxyRouterStr := strings.ToLower(p.GrpcProxyRouter.StringVal())
+
+	switch grpcProxyRouter(grpcProxyRouterStr) {
+
+	case lambda_grpcProxyRouter:
+
+		p.GrpcLambdaRouter.Initialize()
+
+		compRouter = append(compRouter, p.GrpcLambdaRouter)
+		handlers = append(handlers, p.GrpcLambdaRouter)
+
+		log.Info("Initialized gRPC proxy router using gRPC Lambda Router (AWS)")
+
+	default:
+		log.Panic("Unknown gRPC proxy router", "grpcProxyRouter", grpcProxyRouterStr)
+
+	}
+
+	p.Dependency().SetGrpcProxyRouter(compRouter)
+	p.Proxy.Initialize(handlers...)
+
 }
 
 func (p *ProxyInstance[D]) Start() {
@@ -71,21 +105,9 @@ func (p *ProxyInstance[D]) Start() {
 
 	p.ResourceStore.Start()
 
-	p.resourceStoreClient = apiv1.NewResourceStoreClient(p.ResourceStore.ClientConn)
+	p.resourceStoreClient = servicesv1.NewResourceStoreClient(p.ResourceStore.ClientConn)
 
-	switch grpcProxyRouter(strings.ToLower(p.GrpcProxyRouter.StringVal())) {
-
-	case lambda_grpcProxyRouter:
-
-		p.GrpcLambdaRouter.Initialize()
-
-		p.Dependency().SetGrpcProxyRouter(p.GrpcLambdaRouter)
-
-		p.EdgeProxy.Initialize(p.GrpcLambdaRouter)
-
-	}
-
-	p.edgeProxyErrCh = p.EdgeProxy.Sync(p.ctx)
+	p.edgeProxyErrCh = p.Proxy.Sync(p.ctx)
 }
 
 func (p *ProxyInstance[D]) Stop() {

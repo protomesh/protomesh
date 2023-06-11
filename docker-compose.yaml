@@ -1,13 +1,31 @@
 version: "3.5"
 services:
 
-  proxy:
-    image: graviflow:local
+  envoy-xds:
+    image: protomesh:local
     build:
       context: .
       dockerfile: Containerfile
     restart: always
-    command: graviflow -config-file /var/graviflow/proxy.toml
+    command: protomesh -config-file /var/protomesh/envoy_xds.toml
+    env_file:
+      - .env
+    volumes:
+      - ${PWD}/cmd/envoy_xds.toml:/var/protomesh/envoy_xds.toml
+    networks:
+      - protomesh
+    ports:
+      - 7011:7011
+    depends_on:
+      - server
+
+  proxy:
+    image: protomesh:local
+    build:
+      context: .
+      dockerfile: Containerfile
+    restart: always
+    command: protomesh -config-file /var/protomesh/proxy.toml
     env_file:
       - .env
     volumes:
@@ -17,43 +35,34 @@ services:
       # On Windows, this directory can be found at "%UserProfile%\.aws"
       - $HOME/.aws/:/home/.aws/
       # Configuration file
-      - ${PWD}/cmd/proxy.toml:/var/graviflow/proxy.toml
+      - ${PWD}/cmd/proxy.toml:/var/protomesh/proxy.toml
     environment:
       # define the home folder; credentials will be read from $HOME/.aws
       HOME: "/home"
     networks:
-      - graviflow
+      - protomesh
     ports:
       - 5770:5770
     depends_on:
       - server
 
   server:
-    image: graviflow:local
+    image: protomesh:local
     build:
       context: .
       dockerfile: Containerfile
     restart: always
-    command: graviflow -config-file /var/graviflow/server.toml
+    command: protomesh -config-file /var/protomesh/server.toml
     env_file:
       - .env
-    depends_on:
-      - postgresql
     volumes:
-      # Mount /var/run so we can access docker.sock and talk to Docker
-      - /var/run:/var/run
-      # Mount the shared configuration directory, used by the AWS CLI and AWS SDKs
-      # On Windows, this directory can be found at "%UserProfile%\.aws"
-      - $HOME/.aws/:/home/.aws/
-      # Configuration file
-      - ${PWD}/cmd/server.toml:/var/graviflow/server.toml
-    environment:
-      # define the home folder; credentials will be read from $HOME/.aws
-      HOME: "/home"
+      - ${PWD}/cmd/server.toml:/var/protomesh/server.toml
+    networks:
+      - protomesh
     ports:
       - 6680:6680
-    networks:
-      - graviflow
+    depends_on:
+      - postgresql
 
   server-ui:
     image: fullstorydev/grpcui
@@ -72,35 +81,26 @@ services:
       - -debug-client
       - -open-browser=false
       - server:6680
+    networks:
+      - protomesh
     ports:
       - '6690:8080'
     depends_on:
       - server
-    networks:
-      - graviflow
 
-  controller:
-    image: graviflow:local
+  worker:
+    image: protomesh:local
     build:
       context: .
       dockerfile: Containerfile
     restart: always
-    command: graviflow -config-file /var/graviflow/controller.toml
+    command: protomesh -config-file /var/protomesh/worker.toml
     env_file:
       - .env
     volumes:
-      # Mount /var/run so we can access docker.sock and talk to Docker
-      - /var/run:/var/run
-      # Mount the shared configuration directory, used by the AWS CLI and AWS SDKs
-      # On Windows, this directory can be found at "%UserProfile%\.aws"
-      - $HOME/.aws/:/home/.aws/
-      # Configuration file
-      - ${PWD}/cmd/controller.toml:/var/graviflow/controller.toml
-    environment:
-      # define the home folder; credentials will be read from $HOME/.aws
-      HOME: "/home"
+      - ${PWD}/cmd/worker.toml:/var/protomesh/worker.toml
     networks:
-      - graviflow
+      - protomesh
     depends_on:
       - server
       - temporal
@@ -118,7 +118,7 @@ services:
   #   ports:
   #     - 8000:8000
   #   networks:
-  #     - graviflow
+  #     - protomesh
 
   # dynamodb-admin:
   #   image: aaronshaf/dynamodb-admin
@@ -130,33 +130,32 @@ services:
   #     - dynamodb
   #   restart: always
   #   networks:
-  #     - graviflow
+  #     - protomesh
 
-
-  elasticsearch:
-    environment:
-      - cluster.routing.allocation.disk.threshold_enabled=true
-      - cluster.routing.allocation.disk.watermark.low=512mb
-      - cluster.routing.allocation.disk.watermark.high=256mb
-      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
-      - discovery.type=single-node
-      - ES_JAVA_OPTS=-Xms256m -Xmx256m
-      - xpack.security.enabled=false
-    image: elasticsearch:${ELASTICSEARCH_VERSION}
-    networks:
-      - graviflow
-    ports:
-      - 9200:9200
-    volumes:
-      - /var/lib/elasticsearch/data
+  # elasticsearch:
+  #   environment:
+  #     - cluster.routing.allocation.disk.threshold_enabled=true
+  #     - cluster.routing.allocation.disk.watermark.low=512mb
+  #     - cluster.routing.allocation.disk.watermark.high=256mb
+  #     - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+  #     - discovery.type=single-node
+  #     - ES_JAVA_OPTS=-Xms256m -Xmx256m
+  #     - xpack.security.enabled=false
+  #   image: elasticsearch:${ELASTICSEARCH_VERSION}
+  #   networks:
+  #     - protomesh
+  #   ports:
+  #     - 9200:9200
+  #   volumes:
+  #     - /var/lib/elasticsearch/data
 
   postgresql:
     environment:
-      POSTGRES_PASSWORD: graviflow
-      POSTGRES_USER: graviflow
+      POSTGRES_PASSWORD: protomesh
+      POSTGRES_USER: protomesh
     image: postgres:${POSTGRESQL_VERSION}
     networks:
-      - graviflow
+      - protomesh
     ports:
       - 5432:5432
     volumes:
@@ -165,63 +164,63 @@ services:
   pgadmin:
     image: dpage/pgadmin4
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@localhost.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     volumes:
-       - /var/lib/pgadmin
+       - ${PWD}/provider/postgres/servers.json:/pgadmin4/servers.json
     ports:
       - "${PGADMIN_PORT:-5050}:80"
     networks:
-      - graviflow
+      - protomesh
     restart: unless-stopped
 
-  temporal:
-    restart: always
-    depends_on:
-      - postgresql
-      - elasticsearch
-    environment:
-      - DB=postgresql
-      - DB_PORT=5432
-      - POSTGRES_USER=graviflow
-      - POSTGRES_PWD=graviflow
-      - POSTGRES_SEEDS=postgresql
-      - ENABLE_ES=true
-      - ES_SEEDS=elasticsearch
-      - ES_VERSION=v7
-    image: temporalio/auto-setup:${TEMPORAL_VERSION}
-    networks:
-      - graviflow
-    ports:
-      - 7233:7233
-    labels:
-      kompose.volume.type: configMap
+  # temporal:
+  #   restart: always
+  #   depends_on:
+  #     - postgresql
+  #     - elasticsearch
+  #   environment:
+  #     - DB=postgresql
+  #     - DB_PORT=5432
+  #     - POSTGRES_USER=protomesh
+  #     - POSTGRES_PWD=protomesh
+  #     - POSTGRES_SEEDS=postgresql
+  #     - ENABLE_ES=true
+  #     - ES_SEEDS=elasticsearch
+  #     - ES_VERSION=v7
+  #   image: temporalio/auto-setup:${TEMPORAL_VERSION}
+  #   networks:
+  #     - protomesh
+  #   ports:
+  #     - 7233:7233
+  #   labels:
+  #     kompose.volume.type: configMap
 
-  temporal-admin-tools:
-    depends_on:
-      - temporal
-    environment:
-      - TEMPORAL_CLI_ADDRESS=temporal:7233
-    image: temporalio/admin-tools:${TEMPORAL_VERSION}
-    networks:
-      - graviflow
-    stdin_open: true
-    tty: true
+  # temporal-admin-tools:
+  #   depends_on:
+  #     - temporal
+  #   environment:
+  #     - TEMPORAL_CLI_ADDRESS=temporal:7233
+  #   image: temporalio/admin-tools:${TEMPORAL_VERSION}
+  #   networks:
+  #     - protomesh
+  #   stdin_open: true
+  #   tty: true
 
-  temporal-ui:
-    depends_on:
-      - temporal
-    environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
-    image: temporalio/ui:${TEMPORAL_UI_VERSION}
-    networks:
-      - graviflow
-    ports:
-      - 8080:8080
+  # temporal-ui:
+  #   depends_on:
+  #     - temporal
+  #   environment:
+  #     - TEMPORAL_ADDRESS=temporal:7233
+  #     - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+  #   image: temporalio/ui:${TEMPORAL_UI_VERSION}
+  #   networks:
+  #     - protomesh
+  #   ports:
+  #     - 8080:8080
 
 networks:
-  graviflow:
+  protomesh:
     driver: bridge
-    name: graviflow
+    name: protomesh

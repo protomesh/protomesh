@@ -2,6 +2,7 @@ package automation
 
 import (
 	"github.com/aws/aws-sdk-go-v2/service/route53"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/servicediscovery"
 	"github.com/upper-institute/graviflow"
 	apiv1 "github.com/upper-institute/graviflow/proto/api/v1"
@@ -10,16 +11,17 @@ import (
 )
 
 type AutomationDependency interface {
-	GetServiceDiscoveryClient() *servicediscovery.Client
-	GetRoute53Client() *route53.Client
+	GetAwsServiceDiscoveryClient() *servicediscovery.Client
+	GetAwsRoute53Client() *route53.Client
+	GetAwsS3Client() *s3.Client
 	GetResourceStoreClient() apiv1.ResourceStoreClient
 }
 
-type AutomationSet[Dependency AutomationDependency] struct {
-	*graviflow.AppInjector[Dependency]
+type AutomationSet[D AutomationDependency] struct {
+	*graviflow.AppInjector[D]
 }
 
-func (as *AutomationSet[Dependency]) Register(wk worker.Worker) {
+func (as *AutomationSet[D]) Register(wk worker.Worker) {
 
 	wk.RegisterActivityWithOptions(
 		as.ListInstancesFromCloudMapService,
@@ -39,6 +41,28 @@ func (as *AutomationSet[Dependency]) Register(wk worker.Worker) {
 		as.PutRoute53ZoneRecords,
 		activity.RegisterOptions{
 			Name: "aws_putRoute53ZoneRecord",
+		},
+	)
+
+	// S3
+	wk.RegisterActivityWithOptions(
+		as.S3ScanResources,
+		activity.RegisterOptions{
+			Name: "aws_S3ScanResources",
+		},
+	)
+
+	wk.RegisterActivityWithOptions(
+		as.S3ReadFile,
+		activity.RegisterOptions{
+			Name: "aws_S3ReadFile",
+		},
+	)
+
+	wk.RegisterActivityWithOptions(
+		as.S3ObjectToResource,
+		activity.RegisterOptions{
+			Name: "aws_S3ObjectToResource",
 		},
 	)
 

@@ -1,0 +1,26 @@
+enable.worker = true
+
+enable.proxy = false
+enable.server = false
+
+[log]
+
+dev = true
+json = false
+level = "debug"
+
+[worker]
+
+controls.worker.task.queue = "protomesh"
+on.start.file = "/var/protomesh/examples/sync_s3_resources.work.toml"
+
+[worker.resource.store]
+
+client.certificate.path = ""
+client.enable.tls = true
+server.address = "server:6680"
+
+[temporal]
+
+address = "temporal:7233"
+namespace = "default"

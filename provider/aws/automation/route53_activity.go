@@ -22,9 +22,9 @@ type PutRoute53ZoneRecordResponse struct {
 	Action string `json:"action,omitempty"`
 }
 
-func (as *AutomationSet[Dependency]) PutRoute53ZoneRecords(ctx context.Context, req *PutRoute53ZoneRecordRequest) (*PutRoute53ZoneRecordResponse, error) {
+func (as *AutomationSet[D]) PutRoute53ZoneRecords(ctx context.Context, req *PutRoute53ZoneRecordRequest) (*PutRoute53ZoneRecordResponse, error) {
 
-	route53Cli := as.Dependency().GetRoute53Client()
+	route53Cli := as.Dependency().GetAwsRoute53Client()
 
 	listZones, err := route53Cli.ListHostedZonesByName(ctx, &route53.ListHostedZonesByNameInput{
 		DNSName:  aws.String(req.ZoneName),

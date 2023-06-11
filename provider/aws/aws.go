@@ -6,19 +6,19 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/upper-institute/graviflow"
+	"github.com/protomesh/protomesh"
 )
 
-type AwsBuilder[Dependency any] struct {
-	*graviflow.AppInjector[Dependency]
+type AwsBuilder[D any] struct {
+	*protomesh.Injector[D]
 
 	AwsConfig aws.Config
 
-	EnableGrpcLambdaRouter graviflow.Config `config:"enable.grpc.lambda.router,bool" default:"false" usage:"Enable gRPC Lambda router"`
-	DynamoDBEndpoint       graviflow.Config `config:"dynamodb.endpoint.url,str" usage:"Custom DynamoDB Endpoint url"`
+	EnableGrpcLambdaRouter protomesh.Config `config:"enable.grpc.lambda.router,bool" default:"false" usage:"Enable gRPC Lambda router"`
+	DynamoDBEndpoint       protomesh.Config `config:"dynamodb.endpoint.url,str" usage:"Custom DynamoDB Endpoint url"`
 }
 
-func (a *AwsBuilder[Dependency]) Initialize() {
+func (a *AwsBuilder[D]) Initialize() {
 
 	log := a.Log()
 

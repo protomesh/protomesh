@@ -6,11 +6,11 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/upper-institute/graviflow"
-	"github.com/upper-institute/graviflow/internal"
-	"github.com/upper-institute/graviflow/internal/server"
-	awsprovider "github.com/upper-institute/graviflow/provider/aws"
-	"github.com/upper-institute/graviflow/provider/temporal"
+	protomesh "github.com/protomesh/protomesh"
+	internal "github.com/protomesh/protomesh/pkg"
+	"github.com/protomesh/protomesh/pkg/server"
+	awsprovider "github.com/protomesh/protomesh/provider/aws"
+	"github.com/protomesh/protomesh/provider/temporal"
 	temporalcli "go.temporal.io/sdk/client"
 	"google.golang.org/grpc"
 )
@@ -28,17 +28,20 @@ type injector struct {
 
 	GrpcServer *server.GrpcServer[*injector] `config:"grpc.server"`
 
-	EnableServer graviflow.Config           `config:"enable.server,bool" default:"false" usage:"Enable Graviflow server instance (resource store and Envoy xDS)"`
-	Server       *ServerInstance[*injector] `config:"server"`
+	EnableStore protomesh.Config `config:"enable.store,bool" default:"false" usage:"Enable Protomesh resource store instance"`
+	Store       StoreInjector    `config:"store"`
 
-	EnableProxy graviflow.Config          `config:"enable.proxy,bool" default:"false" usage:"Enable Graviflow proxy instance (synchronized with resource store)"`
-	Proxy       *ProxyInstance[*injector] `config:"proxy"`
+	EnableEnvoyXds protomesh.Config `config:"enable.envoy.xds,bool" default:"false" usage:"Enable envoy xds server instance"`
+	EnvoyXds       EnvoyXdsInjector `config:"envoy.xds"`
 
-	EnableController graviflow.Config               `config:"enable.controller,bool" default:"false" usage:"Enable Graviflow controller instance (temporal worker and service mesh workflows/activities)"`
-	Controller       *ControllerInstance[*injector] `config:"controller"`
+	EnableProxy protomesh.Config `config:"enable.proxy,bool" default:"false" usage:"Enable Protomesh proxy instance (synchronized with resource store)"`
+	Proxy       ProxyInjector    `config:"proxy"`
+
+	EnableWorker protomesh.Config `config:"enable.worker,bool" default:"false" usage:"Enable Protomesh worker instance (synchronized with resource store)"`
+	Worker       WorkerInjector   `config:"worker"`
 }
 
-func (i *injector) InjectApp(app graviflow.App) {
+func (i *injector) InjectApp(app protomesh.App) {
 
 	i.Aws = &awsprovider.AwsBuilder[*injector]{}
 
@@ -53,16 +56,17 @@ func (i *injector) InjectApp(app graviflow.App) {
 
 	i.Temporal = &temporal.TemporalBuilder[*injector]{}
 
-	i.Server = NewServerInstance[*injector]()
+	i.Store = NewStoreInstance[*injector]()
+	i.EnvoyXds = NewEnvoyXdsInstance[*injector]()
 	i.Proxy = NewProxyInstance[*injector]()
-	i.Controller = NewControllerInstance[*injector]()
+	i.Worker = NewWorkerInstance[*injector]()
 
 	if printConfig {
-		graviflow.InjectAppAndPrint(app, i)
+		protomesh.InjectAndPrint(app, i)
 		return
 	}
 
-	graviflow.InjectApp(app, i)
+	protomesh.Inject(app, i)
 
 }
 
@@ -96,9 +100,9 @@ func (i *injector) GetTemporalClient() temporalcli.Client {
 
 }
 
-var config = &graviflow.Configurator[*injector]{
+var config = &protomesh.Configurator[*injector]{
 	FlagSet:   flag.CommandLine,
-	KeyCase:   graviflow.JsonPathCase,
+	KeyCase:   protomesh.JsonPathCase,
 	Separator: ".",
 	Print:     printConfig,
 }
@@ -123,45 +127,62 @@ func main() {
 	// Apply loaded configurations to dependency set
 	config.ApplyConfigs(dep)
 
+	log := app.Log()
+
 	// Initialize AWS SDK config
 	dep.Aws.Initialize()
 
-	if dep.EnableProxy.BoolVal() || dep.EnableServer.BoolVal() {
-		// Initialize gRPC server
-		dep.GrpcServer.Initialize()
+	if dep.EnableProxy.BoolVal() {
+		dep.Proxy.Initialize()
+		log.Info("Proxy initialized")
 	}
 
-	if dep.EnableController.BoolVal() {
+	if dep.EnableProxy.BoolVal() || dep.EnableStore.BoolVal() || dep.EnableEnvoyXds.BoolVal() {
+		// Initialize gRPC server
+		dep.GrpcServer.Initialize()
+		log.Info("gRPC server initialized")
+	}
+
+	if dep.EnableWorker.BoolVal() {
 		dep.temporalClient = dep.Temporal.GetTemporalClient()
 		defer dep.temporalClient.Close()
 	}
 
-	if dep.EnableServer.BoolVal() {
-		dep.Server.Start()
-		defer dep.Server.Stop()
+	if dep.EnableStore.BoolVal() {
+		dep.Store.Start()
+		log.Info("Resource store started")
+		defer dep.Store.Stop()
 	}
 
 	if dep.EnableProxy.BoolVal() {
 		dep.Proxy.Start()
+		log.Info("Proxy started")
 		defer dep.Proxy.Stop()
 	}
 
-	if dep.EnableController.BoolVal() {
-		dep.Controller.Start()
-		defer dep.Controller.Stop()
+	if dep.EnableEnvoyXds.BoolVal() {
+		dep.EnvoyXds.Start()
+		log.Info("Envoy xDS server started")
+		defer dep.EnvoyXds.Stop()
 	}
 
-	if dep.EnableProxy.BoolVal() || dep.EnableServer.BoolVal() {
+	if dep.EnableWorker.BoolVal() {
+		dep.Worker.Start()
+		defer dep.Worker.Stop()
+	}
+
+	if dep.EnableProxy.BoolVal() || dep.EnableStore.BoolVal() || dep.EnableEnvoyXds.BoolVal() {
+
 		// Start and defer stop of gRPC Server
 		dep.GrpcServer.Start()
+		log.Info("gRPC server started")
 		defer dep.GrpcServer.Start()
 
 		// Start and defer stop of HTTP Server
 		dep.HttpServer.Start()
+		log.Info("HTTP server started")
 		defer dep.HttpServer.Stop()
 	}
-
-	log := app.Log()
 
 	hostname, err := os.Hostname()
 	if err != nil {

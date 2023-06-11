@@ -5,17 +5,15 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
-	"errors"
-	"io"
 	"time"
 
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
+	"github.com/protomesh/protomesh"
+	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
+	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
+	"github.com/protomesh/protomesh/provider/postgres/gen"
 	migrate "github.com/rubenv/sql-migrate"
-	"github.com/upper-institute/graviflow"
-	typesv1 "github.com/upper-institute/graviflow/proto/api/types/v1"
-	apiv1 "github.com/upper-institute/graviflow/proto/api/v1"
-	"github.com/upper-institute/graviflow/provider/postgres/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -37,11 +35,12 @@ type ResourceStoreDependency interface {
 }
 
 type ResourceStore[D ResourceStoreDependency] struct {
-	*graviflow.AppInjector[D]
+	*protomesh.Injector[D]
 
-	apiv1.UnimplementedResourceStoreServer
+	servicesv1.UnimplementedResourceStoreServer
 
-	MigrationFile graviflow.Config `config:"migration.file,str" usage:"Migration file path to execute"`
+	MigrationFile protomesh.Config `config:"migration.file,str" usage:"Migration file path to execute"`
+	WatchInterval protomesh.Config `config:"watch.interval,duration" usage:"Watch interval between scans"`
 
 	queries *gen.Queries
 }
@@ -71,7 +70,7 @@ func (r *ResourceStore[D]) Initialize() {
 
 	r.queries = gen.New(db)
 
-	apiv1.RegisterResourceStoreServer(r.Dependency().GetGrpcServer(), r)
+	servicesv1.RegisterResourceStoreServer(r.Dependency().GetGrpcServer(), r)
 
 	log.Info("Postgres ResourceStore registered on gRPC server")
 
@@ -92,7 +91,7 @@ func hashResource(res *typesv1.Resource) string {
 
 }
 
-func (r *ResourceStore[D]) Put(ctx context.Context, req *apiv1.PutResourceRequest) (*apiv1.PutResourceResponse, error) {
+func (r *ResourceStore[D]) Put(ctx context.Context, req *servicesv1.PutResourceRequest) (*servicesv1.PutResourceResponse, error) {
 
 	id, err := uuid.Parse(req.Resource.Id)
 	if err != nil {
@@ -152,7 +151,7 @@ func (r *ResourceStore[D]) Put(ctx context.Context, req *apiv1.PutResourceReques
 		return nil, err
 	}
 
-	return &apiv1.PutResourceResponse{
+	return &servicesv1.PutResourceResponse{
 		Version: &typesv1.Version{
 			Sha256Hash: sha256Hash,
 			Timestamp:  timestamppb.New(versionTimestamp),
@@ -162,7 +161,41 @@ func (r *ResourceStore[D]) Put(ctx context.Context, req *apiv1.PutResourceReques
 
 }
 
-func (r *ResourceStore[D]) Drop(ctx context.Context, req *apiv1.DropResourcesRequest) (*apiv1.DropResourcesResponse, error) {
+func (r *ResourceStore[D]) Get(ctx context.Context, req *servicesv1.GetResourceRequest) (*servicesv1.GetResourceResponse, error) {
+
+	id, err := uuid.Parse(req.ResourceId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid resource ID, must be in UUID format (value %s)", req.ResourceId)
+	}
+
+	cacheRes, err := r.queries.GetResourceCache(ctx, gen.GetResourceCacheParams{
+		Namespace: req.Namespace,
+		ID:        id,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &servicesv1.GetResourceResponse{
+		Resource: &typesv1.Resource{
+			Namespace: req.Namespace,
+			Id:        req.ResourceId,
+			Name:      cacheRes.Name,
+			Spec: &anypb.Any{
+				TypeUrl: cacheRes.SpecTypeUrl,
+				Value:   cacheRes.SpecValue,
+			},
+			Version: &typesv1.Version{
+				Sha256Hash: cacheRes.Sha256Hash,
+				Index:      cacheRes.VersionIndex,
+				Timestamp:  timestamppb.New(time.Unix(cacheRes.VersionIndex, 0)),
+			},
+		},
+	}, nil
+
+}
+
+func (r *ResourceStore[D]) Drop(ctx context.Context, req *servicesv1.DropResourcesRequest) (*servicesv1.DropResourcesResponse, error) {
 
 	tx, err := r.Dependency().GetSqlDatabase().Begin()
 	if err != nil {
@@ -203,72 +236,32 @@ func (r *ResourceStore[D]) Drop(ctx context.Context, req *apiv1.DropResourcesReq
 		return nil, err
 	}
 
-	return &apiv1.DropResourcesResponse{}, nil
+	return &servicesv1.DropResourcesResponse{}, nil
 
 }
 
-func (r *ResourceStore[D]) DropBefore(ctx context.Context, req *apiv1.DropBeforeResourcesRequest) (*apiv1.DropBeforeResourcesResponse, error) {
-
-	tx, err := r.Dependency().GetSqlDatabase().Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	qtx := r.queries.WithTx(tx)
-
-	count, err := qtx.CountResourceCacheBefore(ctx, gen.CountResourceCacheBeforeParams{
-		Namespace:          req.Namespace,
-		BeforeVersionIndex: req.Before,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	versionTimestamp := time.Now()
-	versionIndex := versionTimestamp.Unix()
-
-	if err := qtx.InsertDroppedResourceBeforeEvent(ctx, gen.InsertDroppedResourceBeforeEventParams{
-		Namespace:          req.Namespace,
-		BeforeVersionIndex: req.Before,
-		VersionIndex:       versionIndex,
-	}); err != nil {
-		return nil, err
-	}
-
-	if err := qtx.DropResourceCacheBefore(ctx, gen.DropResourceCacheBeforeParams{
-		Namespace:          req.Namespace,
-		BeforeVersionIndex: req.Before,
-	}); err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return &apiv1.DropBeforeResourcesResponse{
-		DroppedCount: int32(count),
-	}, nil
-
-}
-
-func (r *ResourceStore[D]) List(stream apiv1.ResourceStore_ListServer) error {
+func (r *ResourceStore[D]) Watch(req *servicesv1.WatchResourcesRequest, stream servicesv1.ResourceStore_WatchServer) error {
 
 	ctx := stream.Context()
 
 	var listEventsParams *gen.ListResourcesEventsFromNamespaceParams
 
+	watchInterval := r.WatchInterval.DurationVal()
+
 	for {
 
-		req, err := stream.Recv()
-		if err != nil {
+		if listEventsParams != nil {
 
-			if errors.Is(err, io.EOF) {
-				break
+			t := time.NewTimer(watchInterval)
+
+			select {
+
+			case <-ctx.Done():
+				return ctx.Err()
+
+			case <-t.C:
+
 			}
-
-			return err
 
 		}
 
@@ -284,13 +277,15 @@ func (r *ResourceStore[D]) List(stream apiv1.ResourceStore_ListServer) error {
 					RowsOffset: pageSize * i,
 				})
 				if err != nil {
+					if err == sql.ErrNoRows {
+						break
+					}
 					return err
 				}
 
-				res := &apiv1.ListResourcesResponse{
+				res := &servicesv1.WatchResourcesResponse{
 					UpdatedResources: []*typesv1.Resource{},
 					DroppedResources: []*typesv1.Resource{},
-					Nonce:            req.Nonce,
 					EndOfList:        false,
 				}
 
@@ -328,19 +323,25 @@ func (r *ResourceStore[D]) List(stream apiv1.ResourceStore_ListServer) error {
 			}
 
 			maxIndex, err := r.queries.MaxVersionIndexForNamespace(ctx, req.Namespace)
-			if err != nil {
+			switch {
+
+			case err == sql.ErrNoRows:
+				listEventsParams = nil
+
+			case err != nil:
 				return err
+
+			default:
+				listEventsParams = &gen.ListResourcesEventsFromNamespaceParams{
+					Namespace:        req.Namespace,
+					MaxRows:          pageSize,
+					FromVersionIndex: maxIndex.VersionIndex,
+					FromID:           maxIndex.ID,
+				}
+
 			}
 
-			listEventsParams = &gen.ListResourcesEventsFromNamespaceParams{
-				Namespace:        req.Namespace,
-				MaxRows:          pageSize,
-				FromVersionIndex: maxIndex.VersionIndex,
-				FromID:           maxIndex.ID,
-			}
-
-			if err := stream.Send(&apiv1.ListResourcesResponse{
-				Nonce:     req.Nonce,
+			if err := stream.Send(&servicesv1.WatchResourcesResponse{
 				EndOfList: true,
 			}); err != nil {
 				return err
@@ -357,10 +358,9 @@ func (r *ResourceStore[D]) List(stream apiv1.ResourceStore_ListServer) error {
 				return err
 			}
 
-			res := &apiv1.ListResourcesResponse{
+			res := &servicesv1.WatchResourcesResponse{
 				UpdatedResources: []*typesv1.Resource{},
 				DroppedResources: []*typesv1.Resource{},
-				Nonce:            req.Nonce,
 				EndOfList:        false,
 			}
 
@@ -410,8 +410,7 @@ func (r *ResourceStore[D]) List(stream apiv1.ResourceStore_ListServer) error {
 
 		}
 
-		if err := stream.Send(&apiv1.ListResourcesResponse{
-			Nonce:     req.Nonce,
+		if err := stream.Send(&servicesv1.WatchResourcesResponse{
 			EndOfList: true,
 		}); err != nil {
 			return err

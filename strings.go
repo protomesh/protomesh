@@ -1,4 +1,4 @@
-package graviflow
+package protomesh
 
 import (
 	"github.com/iancoleman/strcase"

@@ -1,0 +1,10 @@
+id = "537ee9b5-a500-4960-8273-db81f8697382"
+
+namespace = "proxy"
+name = "PingPongService.DoPong"
+
+[serviceMeshEdge.awsLambdaGrpcEdge]
+
+fullMethodName = "/protomesh.api.v1.PingPongService/DoPing"
+functionName = "protomeshPingback"
+qualifier = "$LATEST"

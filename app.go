@@ -1,4 +1,4 @@
-package graviflow
+package protomesh
 
 import (
 	"fmt"
@@ -8,55 +8,59 @@ import (
 )
 
 type App interface {
-	Config() ConfigSource
+	// Config() ConfigSource
 	Log() Logger
 	Close()
 }
 
-type DependencyInjector[Dependency any] interface {
+type DependencyInjector[D any] interface {
 	InjectApp(App)
-	Dependency() Dependency
+	Dependency() D
 }
 
 type AppDependency interface {
 	Attach(app App, dep interface{})
 }
 
-type AppInjector[Dependency any] struct {
+type Injector[D any] struct {
 	app App
-	dep Dependency
+	dep D
 }
 
-func (a *AppInjector[Dependency]) Attach(app App, dep any) {
+func NewInjector[D any](app App, dep D) *Injector[D] {
+	return &Injector[D]{app, dep}
+}
+
+func (a *Injector[D]) Attach(app App, dep any) {
 	a.app = app
-	a.dep = dep.(Dependency)
+	a.dep = dep.(D)
 }
 
-func (a *AppInjector[Dependency]) Dependency() Dependency {
+func (a *Injector[D]) Dependency() D {
 	return a.dep
 }
 
-func (a *AppInjector[Dependency]) Config() ConfigSource {
-	return a.app.Config()
-}
+// func (a *Injector[Dependency]) Config() ConfigSource {
+// 	return a.app.Config()
+// }
 
-func (a *AppInjector[Dependency]) Log() Logger {
+func (a *Injector[Dependency]) Log() Logger {
 	return a.app.Log()
 }
 
-func (a *AppInjector[Dependency]) Close() {
+func (a *Injector[Dependency]) Close() {
 	a.app.Close()
 }
 
-func InjectApp[D any](app App, dep D) {
-	injectApp(app, dep, false, nil)
+func Inject[D any](app App, dep D) {
+	inject(app, dep, false, nil)
 }
 
-func InjectAppAndPrint[D any](app App, dep D) {
-	injectApp(app, dep, true, nil)
+func InjectAndPrint[D any](app App, dep D) {
+	inject(app, dep, true, nil)
 }
 
-func injectApp[D any](app App, dep D, print bool, lw list.Writer) {
+func inject[D any](app App, dep D, print bool, lw list.Writer) {
 
 	depVal := reflect.ValueOf(dep)
 	appDep := reflect.TypeOf((*AppDependency)(nil)).Elem()
@@ -83,7 +87,7 @@ func injectApp[D any](app App, dep D, print bool, lw list.Writer) {
 
 				fieldEl := fieldVal.Elem()
 
-				appInj := fieldEl.FieldByName("AppInjector")
+				appInj := fieldEl.FieldByName("Injector")
 				if !fieldEl.IsValid() || appInj.Kind() != reflect.Ptr {
 					continue
 				}
@@ -105,7 +109,7 @@ func injectApp[D any](app App, dep D, print bool, lw list.Writer) {
 
 				fieldInst := fieldVal.Interface()
 
-				injectApp(fieldInst.(App), fieldInst, false, lw)
+				inject(fieldInst.(App), fieldInst, false, lw)
 
 				if lw != nil {
 					lw.UnIndent()
