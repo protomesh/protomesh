@@ -40,7 +40,7 @@ type ResourceStore[D ResourceStoreDependency] struct {
 	servicesv1.UnimplementedResourceStoreServer
 
 	MigrationFile protomesh.Config `config:"migration.file,str" usage:"Migration file path to execute"`
-	WatchInterval protomesh.Config `config:"watch.interval,duration" usage:"Watch interval between scans"`
+	WatchInterval protomesh.Config `config:"watch.interval,duration" default:"60s" usage:"Watch interval between scans"`
 
 	queries *gen.Queries
 }
@@ -248,9 +248,9 @@ func (r *ResourceStore[D]) Watch(req *servicesv1.WatchResourcesRequest, stream s
 
 	watchInterval := r.WatchInterval.DurationVal()
 
-	for {
+	for w := 0; ; w++ {
 
-		if listEventsParams != nil {
+		if w > 0 {
 
 			t := time.NewTimer(watchInterval)
 

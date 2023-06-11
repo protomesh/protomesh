@@ -21,7 +21,6 @@ type ProxyDependency interface {
 type Proxy[D ProxyDependency] struct {
 	*protomesh.Injector[D]
 
-	SyncInterval           protomesh.Config `config:"sync.interval,duration" default:"60s" usage:"Interval between synchronization cycles"`
 	ResourceStoreNamespace protomesh.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`
 
 	handlers []ProxyHandler
@@ -92,10 +91,9 @@ func (ep *Proxy[D]) AfterBatch(ctx context.Context) error {
 func (ep *Proxy[D]) Sync(ctx context.Context) <-chan error {
 
 	sync := &resource.ResourceStoreSynchronizer[D]{
-		Injector:     ep.Injector,
-		SyncInterval: ep.SyncInterval.DurationVal(),
-		Namespace:    ep.ResourceStoreNamespace.StringVal(),
-		IndexCursor:  0,
+		Injector:    ep.Injector,
+		Namespace:   ep.ResourceStoreNamespace.StringVal(),
+		IndexCursor: 0,
 
 		EventHandler: ep,
 	}

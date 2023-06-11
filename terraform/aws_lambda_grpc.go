@@ -94,6 +94,7 @@ func readAwsLambdaGrpc(ctx context.Context, rd *schema.ResourceData, i interface
 		if err != nil {
 			return diag.FromErr(err)
 		}
+		// panic(fmt.Sprintf("%+v", node))
 
 		rd.Set("node", []interface{}{node})
 

@@ -30,7 +30,7 @@ resource "protomesh_aws_lambda_grpc" "ping_pong_do_pong" {
 
   node {
     full_method_name = "/protomesh.services.v1.PingPongService/DoPing"
-    function_name    = "graviflowPingback"
+    function_name    = "protomeshPingback"
     qualifier        = "$LATEST"
   }
 

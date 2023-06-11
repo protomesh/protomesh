@@ -16,7 +16,7 @@ namespace = "default"
 
 [worker.service]
 
-resource.store.namespace = "proxy"
+resource.store.namespace = "workflows"
 sync.interval = "1m"
 worker.task.queue = "protomesh"
 

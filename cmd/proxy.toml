@@ -39,7 +39,6 @@ grpc.router = "AwsLambda"
 [proxy.service]
 
 resource.store.namespace = "proxy"
-sync.interval = "1m"
 
 [proxy.resource.store]
 

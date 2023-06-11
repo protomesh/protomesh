@@ -17,7 +17,7 @@ services:
     ports:
       - 7011:7011
     depends_on:
-      - server
+      - store
 
   proxy:
     image: protomesh:local
@@ -44,19 +44,19 @@ services:
     ports:
       - 5770:5770
     depends_on:
-      - server
+      - store
 
-  server:
+  store:
     image: protomesh:local
     build:
       context: .
       dockerfile: Containerfile
     restart: always
-    command: protomesh -config-file /var/protomesh/server.toml
+    command: protomesh -config-file /var/protomesh/store.toml
     env_file:
       - .env
     volumes:
-      - ${PWD}/cmd/server.toml:/var/protomesh/server.toml
+      - ${PWD}/cmd/store.toml:/var/protomesh/store.toml
     networks:
       - protomesh
     ports:
@@ -64,7 +64,7 @@ services:
     depends_on:
       - postgresql
 
-  server-ui:
+  store-ui:
     image: fullstorydev/grpcui
     restart: always
     entrypoint:
@@ -80,30 +80,30 @@ services:
       - '0.0.0.0'
       - -debug-client
       - -open-browser=false
-      - server:6680
+      - store:6680
     networks:
       - protomesh
     ports:
       - '6690:8080'
     depends_on:
-      - server
+      - store
 
-  worker:
-    image: protomesh:local
-    build:
-      context: .
-      dockerfile: Containerfile
-    restart: always
-    command: protomesh -config-file /var/protomesh/worker.toml
-    env_file:
-      - .env
-    volumes:
-      - ${PWD}/cmd/worker.toml:/var/protomesh/worker.toml
-    networks:
-      - protomesh
-    depends_on:
-      - server
-      - temporal
+  # worker:
+  #   image: protomesh:local
+  #   build:
+  #     context: .
+  #     dockerfile: Containerfile
+  #   restart: always
+  #   command: protomesh -config-file /var/protomesh/worker.toml
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ${PWD}/cmd/worker.toml:/var/protomesh/worker.toml
+  #   networks:
+  #     - protomesh
+  #   depends_on:
+  #     - store
+  #     - temporal
 
   # dynamodb:
   #   image: amazon/dynamodb-local

@@ -23,7 +23,6 @@ type Worker[Dependency WorkerDependency] struct {
 
 	WorkerTaskQueue protomesh.Config `config:"worker.task.queue,str" default:"protomesh" usage:"Temporal task queue to register activities and workflows"`
 
-	SyncInterval           protomesh.Config `config:"sync.interval,duration" default:"60s" usage:"Interval between synchronization cycles"`
 	ResourceStoreNamespace protomesh.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`
 
 	Worker worker.Worker
@@ -162,10 +161,9 @@ func (w *Worker[Dependency]) AfterBatch(ctx context.Context) error {
 func (w *Worker[Dependency]) Sync(ctx context.Context) <-chan error {
 
 	sync := &resource.ResourceStoreSynchronizer[Dependency]{
-		Injector:     w.Injector,
-		SyncInterval: w.SyncInterval.DurationVal(),
-		Namespace:    w.ResourceStoreNamespace.StringVal(),
-		IndexCursor:  0,
+		Injector:    w.Injector,
+		Namespace:   w.ResourceStoreNamespace.StringVal(),
+		IndexCursor: 0,
 
 		EventHandler: w,
 	}

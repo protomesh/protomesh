@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/protomesh/protomesh"
@@ -23,9 +22,8 @@ type ResourceStoreSynchronizerDependency interface {
 type ResourceStoreSynchronizer[D ResourceStoreSynchronizerDependency] struct {
 	*protomesh.Injector[D]
 
-	SyncInterval time.Duration
-	Namespace    string
-	IndexCursor  int64
+	Namespace   string
+	IndexCursor int64
 
 	EventHandler interface {
 		BeforeBatch(context.Context) error

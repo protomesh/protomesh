@@ -63,7 +63,6 @@ func (i *idNameMap) Delete(key string) string {
 type EnvoyXds[Dependency EnvoyXdsDependency] struct {
 	*protomesh.Injector[Dependency]
 
-	SyncInterval           protomesh.Config `config:"sync.interval,duration" default:"60s" usage:"Interval between synchronization cycles"`
 	ResourceStoreNamespace protomesh.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`
 
 	resourceMap map[resource.Type]*idNameMap
@@ -297,10 +296,9 @@ func (xds *EnvoyXds[Dependency]) AfterBatch(ctx context.Context) error {
 func (xds *EnvoyXds[Dependency]) Sync(ctx context.Context) <-chan error {
 
 	sync := &resourcepkg.ResourceStoreSynchronizer[Dependency]{
-		Injector:     xds.Injector,
-		SyncInterval: xds.SyncInterval.DurationVal(),
-		Namespace:    xds.ResourceStoreNamespace.StringVal(),
-		IndexCursor:  0,
+		Injector:    xds.Injector,
+		Namespace:   xds.ResourceStoreNamespace.StringVal(),
+		IndexCursor: 0,
 
 		EventHandler: xds,
 	}

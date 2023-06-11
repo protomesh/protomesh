@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -76,6 +77,9 @@ func (g *grpcLambdaMethod) Call(payload []byte) error {
 		Qualifier:      aws.String(g.route.Qualifier),
 		Payload:        in,
 	})
+	if out.FunctionError != nil {
+		return fmt.Errorf("Lambda function returned error: %s", aws.ToString(out.FunctionError))
+	}
 	if err != nil {
 		return err
 	}

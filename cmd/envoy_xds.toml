@@ -30,8 +30,7 @@ protocol = "tcp"
 
 [envoy.xds.service]
 
-resource.store.namespace = "proxy"
-sync.interval = "1m"
+resource.store.namespace = "envoy.xds"
 
 [envoy.xds.resource.store]
 
