@@ -31,11 +31,11 @@ type EnvoyXdsInstance[D EnvoyXdsDeps] struct {
 	ResourceStore       *client.GrpcClient[EnvoyXdsInjector] `config:"resource.store"`
 	resourceStoreClient servicesv1.ResourceStoreClient
 
-	EnvoyXds      *envoy.EnvoyXds[EnvoyXdsInjector] `config:"server"`
+	EnvoyXds      *envoy.EnvoyXds[EnvoyXdsInjector] `config:"service"`
 	envoyXdsErrCh <-chan error
 }
 
-func NewEnvoyXdsInstance[D EnvoyXdsDeps]() EnvoyXdsInjector {
+func NewEnvoyXdsInstance[D EnvoyXdsDeps]() *EnvoyXdsInstance[D] {
 	return &EnvoyXdsInstance[D]{
 		ResourceStore: &client.GrpcClient[EnvoyXdsInjector]{},
 		EnvoyXds:      &envoy.EnvoyXds[EnvoyXdsInjector]{},

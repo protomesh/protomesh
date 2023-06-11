@@ -53,7 +53,7 @@ type ProxyInstance[D ProxyDeps] struct {
 	GrpcLambdaRouter *awsprovider.GrpcLambdaRouter[ProxyInjector] `config:"grpc.to.lambda"`
 }
 
-func NewProxyInstance[D ProxyDeps]() ProxyInjector {
+func NewProxyInstance[D ProxyDeps]() *ProxyInstance[D] {
 	return &ProxyInstance[D]{
 		ResourceStore:    &client.GrpcClient[ProxyInjector]{},
 		Proxy:            &proxy.Proxy[ProxyInjector]{},

@@ -42,7 +42,7 @@ type StoreInstance[D StoreDeps] struct {
 	PostgresResourceStore *postgres.ResourceStore[StoreInjector] `config:"postgres"`
 }
 
-func NewStoreInstance[D StoreDeps]() StoreInjector {
+func NewStoreInstance[D StoreDeps]() *StoreInstance[D] {
 	return &StoreInstance[D]{
 		PostgresResourceStore: &postgres.ResourceStore[StoreInjector]{},
 	}

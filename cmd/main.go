@@ -28,17 +28,17 @@ type injector struct {
 
 	GrpcServer *server.GrpcServer[*injector] `config:"grpc.server"`
 
-	EnableStore protomesh.Config `config:"enable.store,bool" default:"false" usage:"Enable Protomesh resource store instance"`
-	Store       StoreInjector    `config:"store"`
+	EnableStore protomesh.Config          `config:"enable.store,bool" default:"false" usage:"Enable Protomesh resource store instance"`
+	Store       *StoreInstance[*injector] `config:"store"`
 
-	EnableEnvoyXds protomesh.Config `config:"enable.envoy.xds,bool" default:"false" usage:"Enable envoy xds server instance"`
-	EnvoyXds       EnvoyXdsInjector `config:"envoy.xds"`
+	EnableEnvoyXds protomesh.Config             `config:"enable.envoy.xds,bool" default:"false" usage:"Enable envoy xds server instance"`
+	EnvoyXds       *EnvoyXdsInstance[*injector] `config:"envoy.xds"`
 
-	EnableProxy protomesh.Config `config:"enable.proxy,bool" default:"false" usage:"Enable Protomesh proxy instance (synchronized with resource store)"`
-	Proxy       ProxyInjector    `config:"proxy"`
+	EnableProxy protomesh.Config          `config:"enable.proxy,bool" default:"false" usage:"Enable Protomesh proxy instance (synchronized with resource store)"`
+	Proxy       *ProxyInstance[*injector] `config:"proxy"`
 
-	EnableWorker protomesh.Config `config:"enable.worker,bool" default:"false" usage:"Enable Protomesh worker instance (synchronized with resource store)"`
-	Worker       WorkerInjector   `config:"worker"`
+	EnableWorker protomesh.Config           `config:"enable.worker,bool" default:"false" usage:"Enable Protomesh worker instance (synchronized with resource store)"`
+	Worker       *WorkerInstance[*injector] `config:"worker"`
 }
 
 func (i *injector) InjectApp(app protomesh.App) {

@@ -1,17 +1,14 @@
-enable.server = true
+enable.store = true
 
-enable.controller = false
 enable.proxy = false
+enable.worker = false
+enable.envoy.xds = false
 
 [log]
 
 dev = true
 json = false
 level = "debug"
-
-[aws]
-
-dynamodb.endpoint.url = "http://dynamodb:8000"
 
 [grpc]
 
@@ -31,25 +28,15 @@ server.shutdown.timeout.duration = "2m"
 listener.address = "0.0.0.0:6680"
 protocol = "tcp"
 
-[server.resource.store]
+[store]
+provider = "postgres"
 
-provider = "Postgres"
-
-client.certificate.path = ""
-client.enable.tls = true
-server.address = "127.0.0.1:6680"
-
-[server.sql]
+[store.sql]
 
 driver.name = "postgres"
 connection.string = "host=postgresql port=5432 user=protomesh password=protomesh dbname=protomesh sslmode=disable"
 
-[server.postgres]
+[store.postgres]
 
 migration.file = "/var/protomesh/postgres/schema"
-
-[server.envoy.xds]
-
-enable = true
-resource.store.namespace = "envoy"
-sync.interval = "1m"
+watch.interval = "30s"

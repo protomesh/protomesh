@@ -31,7 +31,7 @@ type WorkerInstance[D WorkerDeps] struct {
 	Worker *workerpkg.Worker[WorkerInjector] `config:"service"`
 }
 
-func NewWorkerInstance[D WorkerDeps]() WorkerInjector {
+func NewWorkerInstance[D WorkerDeps]() *WorkerInstance[D] {
 	return &WorkerInstance[D]{
 		ResourceStore: &client.GrpcClient[WorkerInjector]{},
 		Worker:        &workerpkg.Worker[WorkerInjector]{},

@@ -1,7 +1,8 @@
 enable.proxy = true
 
-enable.controller = false
-enable.server = false
+enable.store = false
+enable.worker = false
+enable.envoy.xds = false
 
 [log]
 
@@ -44,4 +45,4 @@ sync.interval = "1m"
 
 client.certificate.path = ""
 client.enable.tls = true
-server.address = "server:6680"
+server.address = "store:6680"
