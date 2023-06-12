@@ -19,13 +19,13 @@ services:
     depends_on:
       - store
 
-  proxy:
+  gateway:
     image: protomesh:local
     build:
       context: .
       dockerfile: Containerfile
     restart: always
-    command: protomesh -config-file /var/protomesh/proxy.toml
+    command: protomesh -config-file /var/protomesh/gateway.toml
     env_file:
       - .env
     volumes:
@@ -35,7 +35,7 @@ services:
       # On Windows, this directory can be found at "%UserProfile%\.aws"
       - $HOME/.aws/:/home/.aws/
       # Configuration file
-      - ${PWD}/cmd/proxy.toml:/var/protomesh/proxy.toml
+      - ${PWD}/cmd/gateway.toml:/var/protomesh/gateway.toml
     environment:
       # define the home folder; credentials will be read from $HOME/.aws
       HOME: "/home"

@@ -34,8 +34,8 @@ type injector struct {
 	EnableEnvoyXds protomesh.Config             `config:"enable.envoy.xds,bool" default:"false" usage:"Enable envoy xds server instance"`
 	EnvoyXds       *EnvoyXdsInstance[*injector] `config:"envoy.xds"`
 
-	EnableProxy protomesh.Config          `config:"enable.proxy,bool" default:"false" usage:"Enable Protomesh proxy instance (synchronized with resource store)"`
-	Proxy       *ProxyInstance[*injector] `config:"proxy"`
+	EnableGateway protomesh.Config            `config:"enable.gateway,bool" default:"false" usage:"Enable Protomesh gateway instance (synchronized with resource store)"`
+	Gateway       *GatewayInstance[*injector] `config:"gateway"`
 
 	EnableWorker protomesh.Config           `config:"enable.worker,bool" default:"false" usage:"Enable Protomesh worker instance (synchronized with resource store)"`
 	Worker       *WorkerInstance[*injector] `config:"worker"`
@@ -58,7 +58,7 @@ func (i *injector) InjectApp(app protomesh.App) {
 
 	i.Store = NewStoreInstance[*injector]()
 	i.EnvoyXds = NewEnvoyXdsInstance[*injector]()
-	i.Proxy = NewProxyInstance[*injector]()
+	i.Gateway = NewGatewayInstance[*injector]()
 	i.Worker = NewWorkerInstance[*injector]()
 
 	if printConfig {
@@ -132,12 +132,12 @@ func main() {
 	// Initialize AWS SDK config
 	dep.Aws.Initialize()
 
-	if dep.EnableProxy.BoolVal() {
-		dep.Proxy.Initialize()
-		log.Info("Proxy initialized")
+	if dep.EnableGateway.BoolVal() {
+		dep.Gateway.Initialize()
+		log.Info("Gateway initialized")
 	}
 
-	if dep.EnableProxy.BoolVal() || dep.EnableStore.BoolVal() || dep.EnableEnvoyXds.BoolVal() {
+	if dep.EnableGateway.BoolVal() || dep.EnableStore.BoolVal() || dep.EnableEnvoyXds.BoolVal() {
 		// Initialize gRPC server
 		dep.GrpcServer.Initialize()
 		log.Info("gRPC server initialized")
@@ -154,10 +154,10 @@ func main() {
 		defer dep.Store.Stop()
 	}
 
-	if dep.EnableProxy.BoolVal() {
-		dep.Proxy.Start()
-		log.Info("Proxy started")
-		defer dep.Proxy.Stop()
+	if dep.EnableGateway.BoolVal() {
+		dep.Gateway.Start()
+		log.Info("Gateway started")
+		defer dep.Gateway.Stop()
 	}
 
 	if dep.EnableEnvoyXds.BoolVal() {
@@ -171,7 +171,7 @@ func main() {
 		defer dep.Worker.Stop()
 	}
 
-	if dep.EnableProxy.BoolVal() || dep.EnableStore.BoolVal() || dep.EnableEnvoyXds.BoolVal() {
+	if dep.EnableGateway.BoolVal() || dep.EnableStore.BoolVal() || dep.EnableEnvoyXds.BoolVal() {
 
 		// Start and defer stop of gRPC Server
 		dep.GrpcServer.Start()

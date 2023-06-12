@@ -7,7 +7,7 @@
 package typesv1
 
 import (
-	_ "github.com/protomesh/protoc-gen-terraform/proto/terraform"
+	_ "github.com/protomesh/protomesh/proto/terraform"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"

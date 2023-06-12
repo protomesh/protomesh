@@ -7,61 +7,93 @@ option go_package = "github.com/protomesh/protomesh/proto/api/services/v1;servic
 import "api/types/v1/version.proto";
 import "api/types/v1/resource.proto";
 
+// PutResourceRequest object to put resources
+// in the store (used for creating and updating resources).
 message PutResourceRequest {
 
+    // Resource to create/update.
     protomesh.types.v1.Resource resource = 1;
 
 }
 
+// PutResourceResponse returns the current resource version
+// after the put operation.
 message PutResourceResponse {
 
     protomesh.types.v1.Version version = 1;
 
 }
 
+// DropResourcesRequest drops multiple resources in the namespace.
 message DropResourcesRequest {
 
-    // Resource IDs to drop
+    // Resource IDs to drop.
     repeated string resource_ids = 1;
+    // Namespace of the resources to drop (each resource is unique within its namespace).
     string namespace = 2;
 
 }
 
+// DropResourcesResponse response to drop resources operation.
 message DropResourcesResponse {
 
 }
 
+// GetResourceRequest request to return just one resource.
 message GetResourceRequest {
 
+    // Namespace of the specified resource.
     string namespace = 1;
+    // Resource ID to bring.
     string resource_id = 2;
 
 }
 
-
+// GetResourceResponse response with the found resource.
+// Returns gRPC not found status code when the resource
+// is not present in the current store state.
 message GetResourceResponse {
 
     protomesh.types.v1.Resource resource = 1;
 
 }
 
+// WatchResourcesRequest stream resource state changes:
+// 
+// When a resource is created or updated, it's returned
+//  in the UpdatedResources field in the response.
+//
+// When a resource is dropped, it's returned
+//  in the DroppedResources field in the response.
 message WatchResourcesRequest {
 
+    // Namespace to watch.
     string namespace = 1;
 
 }
 
+// WatchResourcesResponse response streamed from watch method call.
 message WatchResourcesResponse {
 
+    // Created/Updated resources are returned in this field.
     repeated protomesh.types.v1.Resource updated_resources = 1;
+    // Dropped resources are returned in this field.
     repeated protomesh.types.v1.Resource dropped_resources = 2;
+    // Indicates an end of synchronization iteration (will wait next interval).
     bool end_of_list = 3;
 
 }
 
+// ResourceStore is an event-based state store to provide to Protomesh components
+// a reliable, fast and simple way to abstract any persistence engine with an interface
+// to create, update and drop the state of service mesh resources (nodes).
 service ResourceStore {
+    // Put create/update a resource.
     rpc Put(PutResourceRequest) returns(PutResourceResponse) {}
+    // Drop drop multiple resources within a namespace.
     rpc Drop(DropResourcesRequest) returns(DropResourcesResponse) {}
+    // Get return a single resource within a namespace.
     rpc Get(GetResourceRequest) returns(GetResourceResponse) {}
+    // Watch streams changes in the resources states whithin a namespace.
     rpc Watch(WatchResourcesRequest) returns(stream WatchResourcesResponse) {}
 }

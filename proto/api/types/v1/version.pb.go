@@ -21,14 +21,19 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Version is a message to identify resource versions in the Resource Store.
 type Version struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Sha256Hash string                 `protobuf:"bytes,1,opt,name=sha256_hash,json=sha256Hash,proto3" json:"sha256_hash,omitempty"`
-	Timestamp  *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	Index      int64                  `protobuf:"varint,3,opt,name=index,proto3" json:"index,omitempty"`
+	// The sha256 sum in base64 form.
+	// Uses proto.Marshal(Resource{Namespace,Id,Name,Spec}) as the payload.
+	Sha256Hash string `protobuf:"bytes,1,opt,name=sha256_hash,json=sha256Hash,proto3" json:"sha256_hash,omitempty"`
+	// Timestamp of this version.
+	Timestamp *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// Version index of the current version.
+	Index int64 `protobuf:"varint,3,opt,name=index,proto3" json:"index,omitempty"`
 }
 
 func (x *Version) Reset() {

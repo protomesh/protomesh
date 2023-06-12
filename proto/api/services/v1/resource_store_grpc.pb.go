@@ -22,9 +22,13 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ResourceStoreClient interface {
+	// Put create/update a resource.
 	Put(ctx context.Context, in *PutResourceRequest, opts ...grpc.CallOption) (*PutResourceResponse, error)
+	// Drop drop multiple resources within a namespace.
 	Drop(ctx context.Context, in *DropResourcesRequest, opts ...grpc.CallOption) (*DropResourcesResponse, error)
+	// Get return a single resource within a namespace.
 	Get(ctx context.Context, in *GetResourceRequest, opts ...grpc.CallOption) (*GetResourceResponse, error)
+	// Watch streams changes in the resources states whithin a namespace.
 	Watch(ctx context.Context, in *WatchResourcesRequest, opts ...grpc.CallOption) (ResourceStore_WatchClient, error)
 }
 
@@ -99,9 +103,13 @@ func (x *resourceStoreWatchClient) Recv() (*WatchResourcesResponse, error) {
 // All implementations must embed UnimplementedResourceStoreServer
 // for forward compatibility
 type ResourceStoreServer interface {
+	// Put create/update a resource.
 	Put(context.Context, *PutResourceRequest) (*PutResourceResponse, error)
+	// Drop drop multiple resources within a namespace.
 	Drop(context.Context, *DropResourcesRequest) (*DropResourcesResponse, error)
+	// Get return a single resource within a namespace.
 	Get(context.Context, *GetResourceRequest) (*GetResourceResponse, error)
+	// Watch streams changes in the resources states whithin a namespace.
 	Watch(*WatchResourcesRequest, ResourceStore_WatchServer) error
 	mustEmbedUnimplementedResourceStoreServer()
 }

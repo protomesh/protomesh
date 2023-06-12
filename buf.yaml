@@ -1,7 +1,6 @@
 version: v1
 name: buf.build/protomesh/protomesh
 deps:
-  - buf.build/protomesh/protoc-gen-terraform
   - buf.build/googleapis/googleapis
 breaking:
   use:

@@ -4,13 +4,8 @@ managed:
   go_package_prefix:
     default: github.com/protomesh/protomesh/proto
     except:
-      - buf.build/protomesh/protoc-gen-terraform
       - buf.build/googleapis/googleapis
 plugins:
-  - name: terraform
-    out: terraform/proto
-    opt:
-      - paths=source_relative
   - name: go
     out: proto
     opt:

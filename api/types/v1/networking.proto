@@ -8,56 +8,78 @@ import "terraform/annotations.proto";
 
 option go_package = "github.com/protomesh/protomesh/proto/api/types/v1;typesv1";
 
+// NetworkingNode is a wrapper message to networking nodes in the service mesh.
 message NetworkingNode {
   option (protomesh.terraform.message_schema) = {
     is_resource : false
     generate : true
   };
   
+  // Available newtorking nodes.
   oneof networking_node {
+    // HttpIngress node.
     HttpIngress http_ingress = 1;
+    // Service node.
     Service service = 2;
+    // RoutingPolicy node.
     RoutingPolicy routing_policy = 3;
+    // AwsLambdaGrpc node.
     AwsLambdaGrpc aws_lambda_grpc = 4;
+    // InstanceSet node.
     InstanceSet instance_set = 5;
   }
 }
 
+// Transport protocols.
 enum TransportProtocol {
   TRANSPORT_PROTOCOL_UNDEFINED = 0;
   TRANSPORT_PROTOCOL_TCP = 1;
   TRANSPORT_PROTOCOL_UDP = 2;
 }
 
+// Application protocols.
 enum ApplicationProtocol {
   APPLICATION_PROTOCOL_UNDEFINED = 0;
   APPLICATION_PROTOCOL_HTTP1 = 1;
   APPLICATION_PROTOCOL_HTTP2 = 2;
 }
 
+// HttpFilter is used to abstract Envoy HTTP filters.
 message HttpFilter {
   option (protomesh.terraform.message_schema) = {
     is_resource : false
     generate : true
   };
 
+  // HealthCheck enables the [http health check filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/health_check_filter#config-http-filters-health-check).
   message HealthCheck {
+    // Path is equivalent to check the "path" header in the HTTP request.
+    // Usually this is set to "/healthz".
     string path = 1
         [ (protomesh.terraform.field_schema) = {required : true} ];
   }
 
+  // Cors enables the [http cors filter](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/cors/v3/cors.proto).
   message Cors {}
 
+  // GrpcWeb enables the [grpc-web filter](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/grpc_web/v3/grpc_web.proto).
   message GrpcWeb {}
 
+  // JwtAuthn enables the [JWT authentication filter](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto).
   message JwtAuthn {
 
+    // ClaimToHeader extracts claim's value from JWT token to put in header.
+    // This is used for example to get the user id from the sub claim.
     message ClaimToHeader {
+      // HeaderName is the header name to put the acquired value.
       string header_name = 1;
+      // ClaimName is the claim in the JWT token to acquire the value.
       string claim_name = 2;
     }
 
+    // JWKS can be fetched from remote server via HTTP/HTTPS. This field specifies the remote HTTP URI and how the fetched JWKS should be cached.
     message RemoteJwks {
+
       string http_uri = 1 [
         (protomesh.terraform.field_schema) = {required : true}
       ];
@@ -69,53 +91,86 @@ message HttpFilter {
       google.protobuf.Duration timeout = 3;
     }
 
+    // FromHeader specify headers to get the JWT from.
     message FromHeader {
+      // This is the header name to get the JWT. Example: "Authorization"
       string header_name = 1 [
         (protomesh.terraform.field_schema) = {required : true}
       ];
 
+      // ValuePrefix specifies a prefix in the value before the JWT token to be removed.
+      // Example: "Bearer "
       string value_prefix = 2 [
         (protomesh.terraform.field_schema) = {required : true}
       ];
     }
 
+    // Specify the JWT trusted signature provider.
     message Provider {
+      // Provider name to be used in the rules for matching requests.
       string provider_name = 1 [
         (protomesh.terraform.field_schema) = {required : true}
       ];
 
+      // Forward the JWT token to the upstream.
       bool forward = 2 [
         (protomesh.terraform.field_schema) = {required : true}
       ];
 
+      // Specify the principal that issued the JWT, usually a URL or an email address.
+      // It is optional. If specified, it has to match the iss field in JWT, otherwise the JWT iss field is not checked.
       string issuer = 3 [
         (protomesh.terraform.field_schema) = {required : true}
       ];
 
+      // The list of JWT audiences are allowed to access.
+      // A JWT containing any of these audiences will be accepted.
+      // If not specified, will not check audiences in the token.
       repeated string audiences = 4;
+
+      // JWKS can be fetched from remote server via HTTP/HTTPS.
+      // This field specifies the remote HTTP URI and how the fetched JWKS should be cached.
       RemoteJwks remote_jwks = 5;
+
+      // Add JWT claim to HTTP Header Specify the claim name you want to
+      // copy in which HTTP header. For examples, following config:
+      // The claim must be of type; string, int, double, bool.
+      // Array type claims are not supported.
       repeated ClaimToHeader claim_to_headers = 6;
+
+      // Define where to extract the JWT from an HTTP request.
       repeated FromHeader from_headers = 7;
     }
 
+    // This message specifies a Jwt requirement for a specific Route condition.
     message Rule {
+      // When the path parameter matches the specified prefixes.
       string match_prefix = 1;
+      // Then it's required that the JWT token signature is valid for at least one of
+      // the following providers referenced by its name.
       repeated string required_providers_names = 2;
     }
 
+    // List of providers.
     repeated Provider providers = 1;
+    // List of rules.
     repeated Rule rules = 2;
   }
 
+  // Wrapper to specify a valid HTTP filter.
   oneof filter {
+    // Cors filter.
     Cors cors = 1;
+    // Health check filter.
     HealthCheck health_check = 2;
+    // grpc-web filter.
     GrpcWeb grpc_web = 3;
+    // JWT Authentication filter.
     JwtAuthn jwt_authn = 4;
   }
 }
 
-// HttpIngress represents an ingress proxy
+// HttpIngress represents an ingress proxy listener.
 message HttpIngress {
   option (protomesh.terraform.message_schema) = {
     is_resource : false
@@ -123,16 +178,17 @@ message HttpIngress {
   };
 
   // XDS cluster name: must be the same of the envoy config to be matched by
-  // xDS server
+  // xDS server.
   string xds_cluster_name = 1;
-  // Ingress name (used as route config name for the route specifier)
+  // Ingress name (used as route config name for the route specifier).
   string ingress_name = 2;
-  // Ingress port to listen for incoming requests
+  // Ingress port to listen for incoming requests.
   int32 listen_port = 3;
-  // Http filters to apply to the ingress listener
+  // Http filters to apply to the ingress listener.
   repeated HttpFilter http_filters = 4;
 }
 
+// InstanceSet is a group of instances that provides the same service through a well known port.
 message InstanceSet {
   option (protomesh.terraform.message_schema) = {
     is_resource : false
@@ -140,18 +196,22 @@ message InstanceSet {
   };
 
   message Instance {
-    // Unique identifier for this instance
+    // Unique identifier for this instance.
     string hostname = 1;
+    // Transport protocol available in the instance port.
     TransportProtocol transport_protocol = 2;
+    // Instance address (IPv4 or DNS).
     string address = 3;
+    // Port number where the service is available.
     int32 port = 4;
-
-    string region = 5;
-    string zone = 6;
+    // string region = 5;
+    // string zone = 6;
   }
 
+  // Instances in this set.
   repeated Instance instances = 1;
 
+  // Services names to match instan
   repeated string match_service_names = 2;
 }
 
@@ -162,64 +222,95 @@ message Service {
     generate : true
   };
 
+  // HTTP1 protocol options to connect to upstream.
   message Http1Options {}
 
-  message Http2Options { int32 max_concurrent_streams = 1; }
+  // HTTP2 protocol options to connect to upstream.
+  message Http2Options {
+    //  Maximum concurrent streams allowed for peer on one HTTP/2 connection.
+    // Valid values range from 1 to 2147483647 (2^31 - 1) and defaults to 2147483647.
+    int32 max_concurrent_streams = 1;
+  }
 
   // XDS cluster name: must be the same of the envoy config to be matched by
-  // xDS server
+  // xDS server.
   string xds_cluster_name = 2;
+
+  // Service name (or "cluster" name in Envoy xDS).
   string service_name = 1;
 
+  // Timeout to connect to upstream.
   google.protobuf.Duration connect_timeout = 3;
 
+  // Which protocol to connect to upstream.
   oneof instance_application_protocol_options {
+    // Http1Options options.
     Http1Options instance_http1_options = 4;
+    // Http2Options options.
     Http2Options instance_http2_options = 5;
   }
 }
 
-// Represents a routing policy for the control plane (Envoy Virtual Host)
+// Represents a routing policy for the control plane (Envoy Virtual Host).
 message RoutingPolicy {
   option (protomesh.terraform.message_schema) = {
     is_resource : false
     generate : true
   };
 
+  // Ingress name to match this routing policy.
   string ingress_name = 1;
 
+  // Route (match path prefix to services)
   message Route {
+    // Path prefix in the request to match.
     string match_prefix = 1;
+    // Target service name when this route matches.
     string target_service = 2;
+    // Timeout to connect to service in this route.
     google.protobuf.Duration timeout = 3;
   }
 
+  // Routes in this routing policy.
   repeated Route routes = 2;
 
+  // Cors policy: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/cors/v3/cors.proto
   message Cors {
+    // Specifies string patterns that match allowed origins. An origin is allowed if any of the string matchers match.
     repeated string allow_origin_string_match_prefix = 1;
+    // Specifies the content for the access-control-allow-methods header.
     repeated string allow_methods = 2;
+    // Specifies the content for the access-control-allow-headers header.
     repeated string allow_headers = 3;
+    // Specifies the content for the access-control-expose-headers header.
     repeated string expose_headers = 4;
+    // Specifies the content for the access-control-max-age header.
     google.protobuf.Duration max_age = 5;
   }
 
+  // Cors policy to apply in this routing policy.
   Cors cors = 3;
 
   // XDS cluster name: must be the same of the envoy config to be matched by
   // xDS server
   string xds_cluster_name = 4;
 
+  // Domain to match (you can use wildcard domains).
   string domain = 5;
 }
 
+// AwsLambdaGrpc is used by the Protomesh gateway to handle gRPC method calls
+// backed by AWS Lambda functions.
 message AwsLambdaGrpc {
   option (protomesh.terraform.message_schema) = {
     is_resource : false
     generate : true
   };
   
+  // Full method name of the gRPC method (/my.package.GrpcService/GrpcMethod).
   string full_method_name = 1;
+  // Lambda function name or ARN.
   string function_name = 2;
+  // Version name of Lambda (default $LATEST).
   string qualifier = 3;
 }

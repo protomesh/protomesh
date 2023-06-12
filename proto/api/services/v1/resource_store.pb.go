@@ -21,11 +21,14 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// PutResourceRequest object to put resources
+// in the store (used for creating and updating resources).
 type PutResourceRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Resource to create/update.
 	Resource *v1.Resource `protobuf:"bytes,1,opt,name=resource,proto3" json:"resource,omitempty"`
 }
 
@@ -68,6 +71,8 @@ func (x *PutResourceRequest) GetResource() *v1.Resource {
 	return nil
 }
 
+// PutResourceResponse returns the current resource version
+// after the put operation.
 type PutResourceResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -115,14 +120,16 @@ func (x *PutResourceResponse) GetVersion() *v1.Version {
 	return nil
 }
 
+// DropResourcesRequest drops multiple resources in the namespace.
 type DropResourcesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Resource IDs to drop
+	// Resource IDs to drop.
 	ResourceIds []string `protobuf:"bytes,1,rep,name=resource_ids,json=resourceIds,proto3" json:"resource_ids,omitempty"`
-	Namespace   string   `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	// Namespace of the resources to drop (each resource is unique within its namespace).
+	Namespace string `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
 }
 
 func (x *DropResourcesRequest) Reset() {
@@ -171,6 +178,7 @@ func (x *DropResourcesRequest) GetNamespace() string {
 	return ""
 }
 
+// DropResourcesResponse response to drop resources operation.
 type DropResourcesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -209,12 +217,15 @@ func (*DropResourcesResponse) Descriptor() ([]byte, []int) {
 	return file_api_services_v1_resource_store_proto_rawDescGZIP(), []int{3}
 }
 
+// GetResourceRequest request to return just one resource.
 type GetResourceRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Namespace  string `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	// Namespace of the specified resource.
+	Namespace string `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	// Resource ID to bring.
 	ResourceId string `protobuf:"bytes,2,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
 }
 
@@ -264,6 +275,9 @@ func (x *GetResourceRequest) GetResourceId() string {
 	return ""
 }
 
+// GetResourceResponse response with the found resource.
+// Returns gRPC not found status code when the resource
+// is not present in the current store state.
 type GetResourceResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -311,11 +325,21 @@ func (x *GetResourceResponse) GetResource() *v1.Resource {
 	return nil
 }
 
+// WatchResourcesRequest stream resource state changes:
+//
+// When a resource is created or updated, it's returned
+//
+//	in the UpdatedResources field in the response.
+//
+// When a resource is dropped, it's returned
+//
+//	in the DroppedResources field in the response.
 type WatchResourcesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Namespace to watch.
 	Namespace string `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
 }
 
@@ -358,14 +382,18 @@ func (x *WatchResourcesRequest) GetNamespace() string {
 	return ""
 }
 
+// WatchResourcesResponse response streamed from watch method call.
 type WatchResourcesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Created/Updated resources are returned in this field.
 	UpdatedResources []*v1.Resource `protobuf:"bytes,1,rep,name=updated_resources,json=updatedResources,proto3" json:"updated_resources,omitempty"`
+	// Dropped resources are returned in this field.
 	DroppedResources []*v1.Resource `protobuf:"bytes,2,rep,name=dropped_resources,json=droppedResources,proto3" json:"dropped_resources,omitempty"`
-	EndOfList        bool           `protobuf:"varint,3,opt,name=end_of_list,json=endOfList,proto3" json:"end_of_list,omitempty"`
+	// Indicates an end of synchronization iteration (will wait next interval).
+	EndOfList bool `protobuf:"varint,3,opt,name=end_of_list,json=endOfList,proto3" json:"end_of_list,omitempty"`
 }
 
 func (x *WatchResourcesResponse) Reset() {

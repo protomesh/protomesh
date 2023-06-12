@@ -6,8 +6,13 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/protomesh/protomesh/proto/api/types/v1;typesv1";
 
+// Version is a message to identify resource versions in the Resource Store.
 message Version {
+    // The sha256 sum in base64 form.
+    // Uses proto.Marshal(Resource{Namespace,Id,Name,Spec}) as the payload.
     string sha256_hash = 1;
+    // Timestamp of this version.
     google.protobuf.Timestamp timestamp = 2;
+    // Version index of the current version.
     int64 index = 3;
 }

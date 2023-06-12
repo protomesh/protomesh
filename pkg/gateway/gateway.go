@@ -1,4 +1,4 @@
-package proxy
+package gateway
 
 import (
 	"context"
@@ -9,33 +9,33 @@ import (
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
 )
 
-type ProxyHandler interface {
+type GatewayHandler interface {
 	// Context, active nodes and dropped nodes
 	ProcessNodes(context.Context, []*typesv1.NetworkingNode, []*typesv1.NetworkingNode) error
 }
 
-type ProxyDependency interface {
+type GatewayDependency interface {
 	GetResourceStoreClient() servicesv1.ResourceStoreClient
 }
 
-type Proxy[D ProxyDependency] struct {
+type Gateway[D GatewayDependency] struct {
 	*protomesh.Injector[D]
 
 	ResourceStoreNamespace protomesh.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`
 
-	handlers []ProxyHandler
+	handlers []GatewayHandler
 
 	updated []*typesv1.NetworkingNode
 	dropped []*typesv1.NetworkingNode
 }
 
-func (ep *Proxy[D]) Initialize(handlers ...ProxyHandler) {
+func (ep *Gateway[D]) Initialize(handlers ...GatewayHandler) {
 
 	ep.handlers = handlers
 
 }
 
-func (ep *Proxy[D]) BeforeBatch(ctx context.Context) error {
+func (ep *Gateway[D]) BeforeBatch(ctx context.Context) error {
 
 	ep.updated = []*typesv1.NetworkingNode{}
 	ep.dropped = []*typesv1.NetworkingNode{}
@@ -44,7 +44,7 @@ func (ep *Proxy[D]) BeforeBatch(ctx context.Context) error {
 
 }
 
-func (ep *Proxy[D]) OnUpdated(ctx context.Context, updatedRes *typesv1.Resource) error {
+func (ep *Gateway[D]) OnUpdated(ctx context.Context, updatedRes *typesv1.Resource) error {
 
 	edge := new(typesv1.NetworkingNode)
 
@@ -59,7 +59,7 @@ func (ep *Proxy[D]) OnUpdated(ctx context.Context, updatedRes *typesv1.Resource)
 
 }
 
-func (ep *Proxy[D]) OnDropped(ctx context.Context, droppedRes *typesv1.Resource) error {
+func (ep *Gateway[D]) OnDropped(ctx context.Context, droppedRes *typesv1.Resource) error {
 
 	edge := new(typesv1.NetworkingNode)
 
@@ -74,7 +74,7 @@ func (ep *Proxy[D]) OnDropped(ctx context.Context, droppedRes *typesv1.Resource)
 
 }
 
-func (ep *Proxy[D]) AfterBatch(ctx context.Context) error {
+func (ep *Gateway[D]) AfterBatch(ctx context.Context) error {
 
 	for _, handler := range ep.handlers {
 
@@ -88,7 +88,7 @@ func (ep *Proxy[D]) AfterBatch(ctx context.Context) error {
 
 }
 
-func (ep *Proxy[D]) Sync(ctx context.Context) <-chan error {
+func (ep *Gateway[D]) Sync(ctx context.Context) <-chan error {
 
 	sync := &resource.ResourceStoreSynchronizer[D]{
 		Injector:    ep.Injector,
