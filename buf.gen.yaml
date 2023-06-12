@@ -5,6 +5,7 @@ managed:
     default: github.com/protomesh/protomesh/proto
     except:
       - buf.build/googleapis/googleapis
+      - buf.build/protomesh/protoc-gen-terraform
 plugins:
   - name: go
     out: proto
