@@ -9,28 +9,46 @@ import "google/protobuf/duration.proto";
 import "terraform/annotations.proto";
 
 option (protomesh.terraform.file_schema) = {
-  import_map : [
-    {
-      key: "google.protobuf.Value"
-      value: "github.com/protomesh/protomesh/proto/protobuf;protomeshpb"
-    }
-  ]
+  import_map : [ {
+    key : "google.protobuf.Value"
+    value : "github.com/protomesh/protoc-gen-terraform/pkg/protobuf;protomeshpb"
+  } ]
 };
 
-
-message Trigger {
+// Process is a wrapper message to processes in the service mesh.
+message Process {
   option (protomesh.terraform.message_schema) = {
-    generate : false
+    is_resource : false
+    generate : true
   };
 
-  // Name of the workflow to trigger
+  // Available processes.
+  oneof process {
+    // Trigger process.
+    Trigger trigger = 1;
+  }
+}
+
+// Trigger is used to trigger a Temporal workflow.
+// Each time the Protomesh worker sync its resource state, it'll try to trigger
+// the process, if the process is already running, it'll take the action
+// specified by the trigger itself.
+message Trigger {
+  option (protomesh.terraform.message_schema) = {
+    is_resource : false,
+    generate : true
+  };
+
+  // Name of the workflow to trigger.
   string name = 1 [ (protomesh.terraform.field_schema) = {required : true} ];
 
-  // Task queue on temporal to send workflow tasks
+  // Task queue on temporal to send workflow tasks.
   string task_queue = 2;
 
+  // Static ID prefix.
   string id_prefix = 3;
 
+  // ID string builder options.
   enum IDBuilder {
     // Don't add suffix
     ID_BUILDER_ONLY_PREFIX = 0;
@@ -40,50 +58,102 @@ message Trigger {
     ID_BUILDER_UNIQUE = 2;
   }
 
+  // How to build the ID suffix.
   oneof id_suffix {
-    // Use this exact id for the workflow id
+    // Use this exact id for the workflow id.
     string exact_id_suffix = 4;
+    // ID builder to use to generate the suffix.
     IDBuilder id_suffix_builder = 5;
   }
 
+  // Actions to take if the process is already running.
   enum IfRunningAction {
-    // Abort the current event to keep the running
+    // Abort the current event to keep the running.
     IF_RUNNING_ABORT = 0;
-    // Cancel the running workflow and start the current event
+    // Cancel the running workflow and start the current event.
     IF_RUNNING_OVERLAP = 1;
   }
 
+  // What to do if the process is already running.
   oneof if_running { IfRunningAction if_running_action = 6; }
 
+  // Optional cron schedule for workflow. If a cron schedule is specified, the
+  // workflow will run as a cron based on the schedule. The scheduling will be
+  // based on UTC time. Schedule for next run only happen after the current run
+  // is completed/failed/timeout. If a RetryPolicy is also supplied, and the
+  // workflow failed or timeout, the workflow will be retried based on the retry
+  // policy. While the workflow is retrying, it won't schedule its next run. If
+  // next schedule is due while workflow is running (or retrying), then it will
+  // skip that schedule. Cron workflow will not stop until it is terminated or
+  // canceled (by returning temporal.CanceledError). The cron spec is as
+  // following: ┌───────────── minute (0 - 59) │ ┌───────────── hour (0 - 23) │
+  // │ ┌───────────── day of the month (1 - 31) │ │ │ ┌───────────── month (1 -
+  // 12) │ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday) │ │
+  // │ │ │ │ │ │ │ │
+  // * * * * *
   string cron_schedule = 7;
 
+  // The end to end timeout for the child workflow execution including retries
+  // and continue as new.
+  // Optional: defaults to unlimited.
   google.protobuf.Duration execution_timeout = 8;
+
+  // The timeout for a single run of the child workflow execution. Each retry or
+  // continue as new should obey this timeout. Use WorkflowExecutionTimeout to
+  // specify how long the parent is willing to wait for the child completion.
+  // Optional: defaults to WorkflowExecutionTimeout
   google.protobuf.Duration run_timeout = 9;
+
+  // Maximum execution time of a single Workflow Task. In the majority of cases
+  // there is no need to change this timeout. Note that this timeout is not
+  // related to the overall Workflow duration in any way. It defines for how
+  // long the Workflow can get blocked in the case of a Workflow Worker crash.
+  // Default is 10 seconds. Maximum value allowed by the Temporal Server is 1
+  // minute.
   google.protobuf.Duration task_timeout = 10;
 
+  // A list of arguments to pass to workflow.
   google.protobuf.Value arguments = 11;
 
+  // RetryPolicy specify how to retry child workflow if error happens.
   message RetryPolicy {
-    google.protobuf.Duration initial_interval = 1 [
-      (protomesh.terraform.field_schema) = {
-      required : true
-      default_value : {
-        string_value : "30s"
-      }
-    }
-    ];
+    google.protobuf.Duration initial_interval = 1
+        [ (protomesh.terraform.field_schema) = {
+          required : true
+          default_value : {string_value : "30s"}
+        } ];
+    // Maximum backoff interval between retries. Exponential backoff leads to
+    // interval increase. This value is the cap of the interval. Default is 100x
+    // of initial interval.
     google.protobuf.Duration maximum_backoff = 2;
+    // Maximum number of attempts. When exceeded the retries stop even if not
+    // expired yet. If not set or set to 0, it means unlimited, and rely on
+    // activity ScheduleToCloseTimeout to stop.
     int32 maximum_attempts = 3;
+    // Non-Retriable errors. This is optional. Temporal server will stop retry
+    // if error type matches this list. Note:
+    //  - cancellation is not a failure, so it won't be retried,
+    //  - only StartToClose or Heartbeat timeouts are retryable.
     repeated string non_retryable_errors = 4;
   }
 
+  // RetryPolicy specify how to retry child workflow if error happens.
+  // Optional: default is no retry
   RetryPolicy retry_policy = 12;
 
+  // Actions to do when resource is dropped.
   enum OnDropAction {
+    // Do nothing.
     ON_DROP_DO_NOTHING = 0;
+    // Cancel workflow if it's running.
     ON_DROP_CANCEL = 1;
+    // Terminate workflow if it's running.
     ON_DROP_TERMINATE = 2;
   }
 
-  oneof on_drop { OnDropAction on_drop_action = 13; }
+  // On drop action.
+  oneof on_drop {
+    // On drop action.
+    OnDropAction on_drop_action = 13;
+  }
 }
