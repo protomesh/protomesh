@@ -204,8 +204,10 @@ message InstanceSet {
     string address = 3;
     // Port number where the service is available.
     int32 port = 4;
-    // string region = 5;
-    // string zone = 6;
+    // Instance region.
+    string region = 5;
+    // Instance zone within the region.
+    string zone = 6;
   }
 
   // Instances in this set.
