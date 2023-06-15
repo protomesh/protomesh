@@ -2,19 +2,8 @@ name: "[Protomesh] Build & Push"
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - ./*.go
-      - ./go.mod
-      - ./*.yaml
-      - ./go.sum
-      - api/**
-      - cmd/**
-      - pkg/**
-      - proto/**
-      - provider/**
-      - Containerfile
+    tags:
+      - 'v*'
 
 env:
   REGISTRY: ghcr.io
@@ -53,7 +42,7 @@ jobs:
       with:
         image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         archs: amd64
-        tags: ${{ github.sha }}
+        tags: ${{ github.ref_name }}
         oci: 'true'
         context: ./
         containerfiles: |

@@ -418,6 +418,4 @@ func (r *ResourceStore[D]) Watch(req *servicesv1.WatchResourcesRequest, stream s
 
 	}
 
-	return nil
-
 }

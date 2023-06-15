@@ -9,6 +9,7 @@ import (
 	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -54,6 +55,20 @@ func (w *Worker[Dependency]) Initialize() {
 func (w *Worker[Depedency]) Start() {
 
 	log := w.Log()
+
+	resCli := w.Dependency().GetResourceStoreClient()
+
+	w.Worker.RegisterActivityWithOptions(resCli.Drop, activity.RegisterOptions{
+		Name: "ResourceStore_Drop",
+	})
+
+	w.Worker.RegisterActivityWithOptions(resCli.Get, activity.RegisterOptions{
+		Name: "ResourceStore_Get",
+	})
+
+	w.Worker.RegisterActivityWithOptions(resCli.Put, activity.RegisterOptions{
+		Name: "ResourceStore_Put",
+	})
 
 	err := w.Worker.Start()
 	if err != nil {
