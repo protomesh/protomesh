@@ -66,29 +66,21 @@ func (i *injector) Dependency() *injector {
 }
 
 func (i *injector) GetGrpcServer() *grpc.Server {
-
 	return i.GrpcServer.Server
-
 }
 
 func (i *injector) SetGrpcProxyRouter(router server.GrpcRouter) {
-
 	i.GrpcServer.GrpcProxy = &server.GrpcProxy{
 		Router: router,
 	}
-
 }
 
 func (i *injector) GetAwsConfig() aws.Config {
-
 	return i.Aws.AwsConfig
-
 }
 
 func (i *injector) GetTemporalClient() temporalcli.Client {
-
 	return i.temporalClient
-
 }
 
 var opts = &app.AppOptions{
