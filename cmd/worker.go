@@ -9,6 +9,10 @@ import (
 	"go.temporal.io/sdk/worker"
 )
 
+var (
+	_ WorkerInjector = &WorkerInstance[*root]{}
+)
+
 type WorkerDeps interface {
 	GetTemporalClient() temporalcli.Client
 }

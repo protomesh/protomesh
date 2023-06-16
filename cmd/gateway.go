@@ -15,6 +15,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	_ GatewayInjector = &GatewayInstance[*root]{}
+)
+
 type grpcGatewayRouter string
 
 const (
@@ -30,10 +34,6 @@ type GatewayDeps interface {
 type GatewayInjector interface {
 	GetLambdaClient() *lambda.Client
 	GetResourceStoreClient() servicesv1.ResourceStoreClient
-
-	Initialize()
-	Start()
-	Stop()
 }
 
 type GatewayInstance[D GatewayDeps] struct {

@@ -10,6 +10,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	_ EnvoyXdsInjector = &EnvoyXdsInstance[*root]{}
+)
+
 type EnvoyXdsDeps interface {
 	GetGrpcServer() *grpc.Server
 }

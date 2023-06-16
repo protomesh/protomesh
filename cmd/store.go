@@ -12,6 +12,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	_ StoreInjector = &StoreInstance[*root]{}
+)
+
 type resourceStoreProvider string
 
 const (

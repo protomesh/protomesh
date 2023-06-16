@@ -14,85 +14,83 @@ import (
 	"google.golang.org/grpc"
 )
 
-type injector struct {
-	*app.Injector[*injector]
+type root struct {
+	*app.Injector[*root]
 
-	Aws *awsprovider.AwsBuilder[*injector] `config:"aws"`
+	Aws *awsprovider.AwsBuilder[*root] `config:"aws"`
 
-	HttpServer   *server.HttpServer[*injector] `config:"http.server"`
+	HttpServer   *server.HttpServer[*root] `config:"http.server"`
 	httpServeMux *http.ServeMux
 
-	Temporal       *temporal.TemporalBuilder[*injector] `config:"temporal"`
+	Temporal       *temporal.TemporalBuilder[*root] `config:"temporal"`
 	temporalClient temporalcli.Client
 
-	GrpcServer *server.GrpcServer[*injector] `config:"grpc.server"`
+	GrpcServer *server.GrpcServer[*root] `config:"grpc.server"`
 
-	EnableStore app.Config                `config:"enable.store,bool" default:"false" usage:"Enable Protomesh resource store instance"`
-	Store       *StoreInstance[*injector] `config:"store"`
+	EnableStore app.Config            `config:"enable.store,bool" default:"false" usage:"Enable Protomesh resource store instance"`
+	Store       *StoreInstance[*root] `config:"store"`
 
-	EnableEnvoyXds app.Config                   `config:"enable.envoy.xds,bool" default:"false" usage:"Enable envoy xds server instance"`
-	EnvoyXds       *EnvoyXdsInstance[*injector] `config:"envoy.xds"`
+	EnableEnvoyXds app.Config               `config:"enable.envoy.xds,bool" default:"false" usage:"Enable envoy xds server instance"`
+	EnvoyXds       *EnvoyXdsInstance[*root] `config:"envoy.xds"`
 
-	EnableGateway app.Config                  `config:"enable.gateway,bool" default:"false" usage:"Enable Protomesh gateway instance (synchronized with resource store)"`
-	Gateway       *GatewayInstance[*injector] `config:"gateway"`
+	EnableGateway app.Config              `config:"enable.gateway,bool" default:"false" usage:"Enable Protomesh gateway instance (synchronized with resource store)"`
+	Gateway       *GatewayInstance[*root] `config:"gateway"`
 
-	EnableWorker app.Config                 `config:"enable.worker,bool" default:"false" usage:"Enable Protomesh worker instance (synchronized with resource store)"`
-	Worker       *WorkerInstance[*injector] `config:"worker"`
+	EnableWorker app.Config             `config:"enable.worker,bool" default:"false" usage:"Enable Protomesh worker instance (synchronized with resource store)"`
+	Worker       *WorkerInstance[*root] `config:"worker"`
 }
 
-func newInjector() *injector {
+func newRoot() *root {
 
-	grpcServer := &server.GrpcServer[*injector]{}
+	grpcServer := &server.GrpcServer[*root]{}
 
-	return &injector{
-		Aws: &awsprovider.AwsBuilder[*injector]{},
-		HttpServer: &server.HttpServer[*injector]{
+	return &root{
+		Aws: &awsprovider.AwsBuilder[*root]{},
+		HttpServer: &server.HttpServer[*root]{
 			HttpHandler: http.NewServeMux(),
 			GrpcHandler: grpcServer,
 		},
 		httpServeMux: http.NewServeMux(),
-		Temporal:     &temporal.TemporalBuilder[*injector]{},
+		Temporal:     &temporal.TemporalBuilder[*root]{},
 		GrpcServer:   grpcServer,
-		Store:        NewStoreInstance[*injector](),
-		EnvoyXds:     NewEnvoyXdsInstance[*injector](),
-		Gateway:      NewGatewayInstance[*injector](),
-		Worker:       NewWorkerInstance[*injector](),
+		Store:        NewStoreInstance[*root](),
+		EnvoyXds:     NewEnvoyXdsInstance[*root](),
+		Gateway:      NewGatewayInstance[*root](),
+		Worker:       NewWorkerInstance[*root](),
 	}
 
 }
 
-func (i *injector) Dependency() *injector {
+func (i *root) Dependency() *root {
 	return i
 }
 
-func (i *injector) GetGrpcServer() *grpc.Server {
+func (i *root) GetGrpcServer() *grpc.Server {
 	return i.GrpcServer.Server
 }
 
-func (i *injector) SetGrpcProxyRouter(router server.GrpcRouter) {
+func (i *root) SetGrpcProxyRouter(router server.GrpcRouter) {
 	i.GrpcServer.GrpcProxy = &server.GrpcProxy{
 		Router: router,
 	}
 }
 
-func (i *injector) GetAwsConfig() aws.Config {
+func (i *root) GetAwsConfig() aws.Config {
 	return i.Aws.AwsConfig
 }
 
-func (i *injector) GetTemporalClient() temporalcli.Client {
+func (i *root) GetTemporalClient() temporalcli.Client {
 	return i.temporalClient
 }
 
 var opts = &app.AppOptions{
-	FlagSet:   flag.CommandLine,
-	KeyCase:   app.JsonPathCase,
-	Separator: ".",
-	Print:     os.Getenv("PRINT_CONFIG") == "true",
+	FlagSet: flag.CommandLine,
+	Print:   os.Getenv("PRINT_CONFIG") == "true",
 }
 
 func main() {
 
-	deps := newInjector()
+	deps := newRoot()
 
 	cmdApp := app.NewApp(deps, opts)
 	defer cmdApp.Close()
