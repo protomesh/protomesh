@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v3"
 )
@@ -16,7 +16,7 @@ type fileSource struct {
 	config   gjson.Result
 }
 
-func NewFileSource(filePath string) protomesh.ConfigSource {
+func NewFileSource(filePath string) app.ConfigSource {
 	return &fileSource{
 		filePath: filePath,
 	}
@@ -67,7 +67,7 @@ func (f *fileSource) Load() error {
 		}
 
 	default:
-		return protomesh.UnkownConfigFormatError
+		return app.UnkownConfigFormatError
 
 	}
 
@@ -77,7 +77,7 @@ func (f *fileSource) Load() error {
 
 }
 
-func (f *fileSource) Get(k string) protomesh.Config {
+func (f *fileSource) Get(k string) app.Config {
 
 	res := f.config.Get(k)
 

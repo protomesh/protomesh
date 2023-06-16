@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
 	"github.com/protomesh/protomesh/provider/postgres/gen"
@@ -35,12 +35,12 @@ type ResourceStoreDependency interface {
 }
 
 type ResourceStore[D ResourceStoreDependency] struct {
-	*protomesh.Injector[D]
+	*app.Injector[D]
 
 	servicesv1.UnimplementedResourceStoreServer
 
-	MigrationFile protomesh.Config `config:"migration.file,str" usage:"Migration file path to execute"`
-	WatchInterval protomesh.Config `config:"watch.interval,duration" default:"60s" usage:"Watch interval between scans"`
+	MigrationFile app.Config `config:"migration.file,str" usage:"Migration file path to execute"`
+	WatchInterval app.Config `config:"watch.interval,duration" default:"60s" usage:"Watch interval between scans"`
 
 	queries *gen.Queries
 }

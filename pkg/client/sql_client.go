@@ -3,16 +3,16 @@ package client
 import (
 	"database/sql"
 
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 )
 
 type SqlClient[D any] struct {
-	*protomesh.Injector[D]
+	*app.Injector[D]
 
 	DB *sql.DB
 
-	DriverName       protomesh.Config `config:"driver.name,str" default:"postgres" usage:"Driver name to use in the SQL client"`
-	ConnectionString protomesh.Config `config:"connection.string,str" usage:"Connection string to connect to SQL database"`
+	DriverName       app.Config `config:"driver.name,str" default:"postgres" usage:"Driver name to use in the SQL client"`
+	ConnectionString app.Config `config:"connection.string,str" usage:"Connection string to connect to SQL database"`
 }
 
 func (s *SqlClient[D]) Start() {

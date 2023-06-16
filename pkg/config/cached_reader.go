@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 )
 
 type cachedReader struct {
@@ -19,7 +19,7 @@ type cachedReader struct {
 	interfaceVal   interface{}
 }
 
-func CacheConfig(cr protomesh.Config) protomesh.Config {
+func CacheConfig(cr app.Config) app.Config {
 	return &cachedReader{
 		isSet:          cr.IsSet(),
 		stringVal:      cr.StringVal(),

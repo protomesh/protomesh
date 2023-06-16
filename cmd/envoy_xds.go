@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	protomesh "github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/client"
 	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
 	"github.com/protomesh/protomesh/provider/envoy"
@@ -23,7 +23,7 @@ type EnvoyXdsInjector interface {
 }
 
 type EnvoyXdsInstance[D EnvoyXdsDeps] struct {
-	*protomesh.Injector[D]
+	*app.Injector[D]
 
 	ctx    context.Context
 	cancel context.CancelFunc

@@ -6,7 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/client"
 	"github.com/protomesh/protomesh/pkg/gateway"
 	"github.com/protomesh/protomesh/pkg/server"
@@ -37,7 +37,7 @@ type GatewayInjector interface {
 }
 
 type GatewayInstance[D GatewayDeps] struct {
-	*protomesh.Injector[D]
+	*app.Injector[D]
 
 	ResourceStore       *client.GrpcClient[GatewayInjector] `config:"resource.store"`
 	resourceStoreClient servicesv1.ResourceStoreClient
@@ -45,7 +45,7 @@ type GatewayInstance[D GatewayDeps] struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	GrpcProxyRouter protomesh.Config `config:"grpc.router,str" usage:"Which grpc proxy router to use"`
+	GrpcProxyRouter app.Config `config:"grpc.router,str" usage:"Which grpc proxy router to use"`
 
 	Gateway      *gateway.Gateway[GatewayInjector] `config:"service"`
 	gatewayErrCh <-chan error

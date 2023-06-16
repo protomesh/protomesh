@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/resource"
 	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
@@ -20,11 +20,11 @@ type WorkerDependency interface {
 }
 
 type Worker[Dependency WorkerDependency] struct {
-	*protomesh.Injector[Dependency]
+	*app.Injector[Dependency]
 
-	WorkerTaskQueue protomesh.Config `config:"worker.task.queue,str" default:"protomesh" usage:"Temporal task queue to register activities and workflows"`
+	WorkerTaskQueue app.Config `config:"worker.task.queue,str" default:"protomesh" usage:"Temporal task queue to register activities and workflows"`
 
-	ResourceStoreNamespace protomesh.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`
+	ResourceStoreNamespace app.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`
 
 	Worker worker.Worker
 

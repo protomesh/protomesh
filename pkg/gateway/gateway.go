@@ -3,7 +3,7 @@ package gateway
 import (
 	"context"
 
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/resource"
 	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
@@ -19,9 +19,9 @@ type GatewayDependency interface {
 }
 
 type Gateway[D GatewayDependency] struct {
-	*protomesh.Injector[D]
+	*app.Injector[D]
 
-	ResourceStoreNamespace protomesh.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`
+	ResourceStoreNamespace app.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`
 
 	handlers []GatewayHandler
 

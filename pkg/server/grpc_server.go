@@ -2,7 +2,7 @@ package server
 
 import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 
 	// "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	// grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -11,13 +11,13 @@ import (
 )
 
 type GrpcServer[Dependency any] struct {
-	*protomesh.Injector[Dependency]
+	*app.Injector[Dependency]
 
 	*grpc.Server
 
 	GrpcProxy *GrpcProxy
 
-	EnableReflection protomesh.Config `config:"enable.reflection,bool" default:"false" usage:"Enable gRPC server reflection"`
+	EnableReflection app.Config `config:"enable.reflection,bool" default:"false" usage:"Enable gRPC server reflection"`
 }
 
 func (g *GrpcServer[Dependency]) Initialize() {

@@ -4,8 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 
-	"github.com/protomesh/protomesh"
-
+	"github.com/protomesh/go-app"
 	tlsprovider "github.com/protomesh/protomesh/provider/tls"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -13,15 +12,15 @@ import (
 )
 
 type GrpcClient[Dependency any] struct {
-	*protomesh.Injector[Dependency]
+	*app.Injector[Dependency]
 
 	ClientConn *grpc.ClientConn
 
 	TlsBuilder *tlsprovider.CertificateLoader[any] `config:"client.certificate"`
-	EnableTls  protomesh.Config                    `config:"client.enable.tls" default:"false" usage:"Enable mTLS from client-side"`
+	EnableTls  app.Config                          `config:"client.enable.tls" default:"false" usage:"Enable mTLS from client-side"`
 
-	ServerNameOverride protomesh.Config `config:"server.name.override,str" usage:"Server name used to verify the hostname returned by TLS handshake"`
-	ServerAddress      protomesh.Config `config:"server.address,str" usage:"gRPC server address to connect to"`
+	ServerNameOverride app.Config `config:"server.name.override,str" usage:"Server name used to verify the hostname returned by TLS handshake"`
+	ServerAddress      app.Config `config:"server.address,str" usage:"gRPC server address to connect to"`
 }
 
 func (g *GrpcClient[Dependency]) Start() {

@@ -4,18 +4,18 @@ import (
 	"os"
 	"strings"
 
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 )
 
 type envSource struct {
-	keyCase protomesh.KeyCase
-	configs map[string]protomesh.Config
+	keyCase app.KeyCase
+	configs map[string]app.Config
 }
 
-func NewEnvSource(keyCase protomesh.KeyCase) protomesh.ConfigSource {
+func NewEnvSource(keyCase app.KeyCase) app.ConfigSource {
 	return &envSource{
 		keyCase: keyCase,
-		configs: make(map[string]protomesh.Config),
+		configs: make(map[string]app.Config),
 	}
 }
 
@@ -27,7 +27,7 @@ func (e *envSource) Load() error {
 
 		sep := strings.Index(env, "=")
 
-		key := protomesh.ConvertKeyCase(env[:sep-1], e.keyCase)
+		key := app.ConvertKeyCase(env[:sep-1], e.keyCase)
 		val := env[sep+1:]
 
 		e.configs[key] = NewConfig(val)
@@ -38,7 +38,7 @@ func (e *envSource) Load() error {
 
 }
 
-func (e *envSource) Get(k string) protomesh.Config {
+func (e *envSource) Get(k string) app.Config {
 
 	if c, ok := e.configs[k]; ok {
 		return c

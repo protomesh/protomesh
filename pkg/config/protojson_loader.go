@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/yaml.v3"
@@ -38,7 +38,7 @@ func ProtoJsonFileExtensionToFormat(filePath string) (ProtoJson_SourceFormat, er
 
 	}
 
-	return "", protomesh.UnkownConfigFormatError
+	return "", app.UnkownConfigFormatError
 
 }
 
@@ -78,7 +78,7 @@ func ProtoJsonUnmarshal[M proto.Message](buf []byte, enc ProtoJson_SourceFormat,
 		}
 
 	default:
-		return protomesh.UnkownConfigFormatError
+		return app.UnkownConfigFormatError
 
 	}
 

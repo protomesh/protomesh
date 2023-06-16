@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 )
 
 type valReader struct {
 	val interface{}
 }
 
-func NewConfig(val interface{}) protomesh.Config {
+func NewConfig(val interface{}) app.Config {
 
 	switch typedVal := val.(type) {
 

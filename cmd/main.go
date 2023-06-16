@@ -6,8 +6,7 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	protomesh "github.com/protomesh/protomesh"
-	internal "github.com/protomesh/protomesh/pkg"
+	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/server"
 	awsprovider "github.com/protomesh/protomesh/provider/aws"
 	"github.com/protomesh/protomesh/provider/temporal"
@@ -15,9 +14,9 @@ import (
 	"google.golang.org/grpc"
 )
 
-var printConfig = os.Getenv("PRINT_CONFIG") == "true"
-
 type injector struct {
+	*app.Injector[*injector]
+
 	Aws *awsprovider.AwsBuilder[*injector] `config:"aws"`
 
 	HttpServer   *server.HttpServer[*injector] `config:"http.server"`
@@ -28,45 +27,37 @@ type injector struct {
 
 	GrpcServer *server.GrpcServer[*injector] `config:"grpc.server"`
 
-	EnableStore protomesh.Config          `config:"enable.store,bool" default:"false" usage:"Enable Protomesh resource store instance"`
+	EnableStore app.Config                `config:"enable.store,bool" default:"false" usage:"Enable Protomesh resource store instance"`
 	Store       *StoreInstance[*injector] `config:"store"`
 
-	EnableEnvoyXds protomesh.Config             `config:"enable.envoy.xds,bool" default:"false" usage:"Enable envoy xds server instance"`
+	EnableEnvoyXds app.Config                   `config:"enable.envoy.xds,bool" default:"false" usage:"Enable envoy xds server instance"`
 	EnvoyXds       *EnvoyXdsInstance[*injector] `config:"envoy.xds"`
 
-	EnableGateway protomesh.Config            `config:"enable.gateway,bool" default:"false" usage:"Enable Protomesh gateway instance (synchronized with resource store)"`
+	EnableGateway app.Config                  `config:"enable.gateway,bool" default:"false" usage:"Enable Protomesh gateway instance (synchronized with resource store)"`
 	Gateway       *GatewayInstance[*injector] `config:"gateway"`
 
-	EnableWorker protomesh.Config           `config:"enable.worker,bool" default:"false" usage:"Enable Protomesh worker instance (synchronized with resource store)"`
+	EnableWorker app.Config                 `config:"enable.worker,bool" default:"false" usage:"Enable Protomesh worker instance (synchronized with resource store)"`
 	Worker       *WorkerInstance[*injector] `config:"worker"`
 }
 
-func (i *injector) InjectApp(app protomesh.App) {
+func newInjector() *injector {
 
-	i.Aws = &awsprovider.AwsBuilder[*injector]{}
+	grpcServer := &server.GrpcServer[*injector]{}
 
-	i.httpServeMux = http.NewServeMux()
-
-	i.GrpcServer = &server.GrpcServer[*injector]{}
-
-	i.HttpServer = &server.HttpServer[*injector]{
-		HttpHandler: i.httpServeMux,
-		GrpcHandler: i.GrpcServer,
+	return &injector{
+		Aws: &awsprovider.AwsBuilder[*injector]{},
+		HttpServer: &server.HttpServer[*injector]{
+			HttpHandler: http.NewServeMux(),
+			GrpcHandler: grpcServer,
+		},
+		httpServeMux: http.NewServeMux(),
+		Temporal:     &temporal.TemporalBuilder[*injector]{},
+		GrpcServer:   grpcServer,
+		Store:        NewStoreInstance[*injector](),
+		EnvoyXds:     NewEnvoyXdsInstance[*injector](),
+		Gateway:      NewGatewayInstance[*injector](),
+		Worker:       NewWorkerInstance[*injector](),
 	}
-
-	i.Temporal = &temporal.TemporalBuilder[*injector]{}
-
-	i.Store = NewStoreInstance[*injector]()
-	i.EnvoyXds = NewEnvoyXdsInstance[*injector]()
-	i.Gateway = NewGatewayInstance[*injector]()
-	i.Worker = NewWorkerInstance[*injector]()
-
-	if printConfig {
-		protomesh.InjectAndPrint(app, i)
-		return
-	}
-
-	protomesh.Inject(app, i)
 
 }
 
@@ -100,88 +91,75 @@ func (i *injector) GetTemporalClient() temporalcli.Client {
 
 }
 
-var config = &protomesh.Configurator[*injector]{
+var opts = &app.AppOptions{
 	FlagSet:   flag.CommandLine,
-	KeyCase:   protomesh.JsonPathCase,
+	KeyCase:   app.JsonPathCase,
 	Separator: ".",
-	Print:     printConfig,
+	Print:     os.Getenv("PRINT_CONFIG") == "true",
 }
 
 func main() {
 
-	dep := &injector{}
+	deps := newInjector()
 
-	// Apply configuration for dependencies
-	config.ApplyFlags(dep)
+	cmdApp := app.NewApp(deps, opts)
+	defer cmdApp.Close()
 
-	// Parse command flags
-	flag.Parse()
-
-	// Create app with dependency set and configurator
-	app := internal.CreateApp[*injector](dep, config)
-	defer app.Close()
-
-	// Inject app into dependency set
-	dep.InjectApp(app)
-
-	// Apply loaded configurations to dependency set
-	config.ApplyConfigs(dep)
-
-	log := app.Log()
+	log := cmdApp.Log()
 
 	// Initialize AWS SDK config
-	dep.Aws.Initialize()
+	deps.Aws.Initialize()
 
-	if dep.EnableGateway.BoolVal() {
-		dep.Gateway.Initialize()
+	if deps.EnableGateway.BoolVal() {
+		deps.Gateway.Initialize()
 		log.Info("Gateway initialized")
 	}
 
-	if dep.EnableGateway.BoolVal() || dep.EnableStore.BoolVal() || dep.EnableEnvoyXds.BoolVal() {
+	if deps.EnableGateway.BoolVal() || deps.EnableStore.BoolVal() || deps.EnableEnvoyXds.BoolVal() {
 		// Initialize gRPC server
-		dep.GrpcServer.Initialize()
+		deps.GrpcServer.Initialize()
 		log.Info("gRPC server initialized")
 	}
 
-	if dep.EnableWorker.BoolVal() {
-		dep.temporalClient = dep.Temporal.GetTemporalClient()
-		defer dep.temporalClient.Close()
+	if deps.EnableWorker.BoolVal() {
+		deps.temporalClient = deps.Temporal.GetTemporalClient()
+		defer deps.temporalClient.Close()
 	}
 
-	if dep.EnableStore.BoolVal() {
-		dep.Store.Start()
+	if deps.EnableStore.BoolVal() {
+		deps.Store.Start()
 		log.Info("Resource store started")
-		defer dep.Store.Stop()
+		defer deps.Store.Stop()
 	}
 
-	if dep.EnableGateway.BoolVal() {
-		dep.Gateway.Start()
+	if deps.EnableGateway.BoolVal() {
+		deps.Gateway.Start()
 		log.Info("Gateway started")
-		defer dep.Gateway.Stop()
+		defer deps.Gateway.Stop()
 	}
 
-	if dep.EnableEnvoyXds.BoolVal() {
-		dep.EnvoyXds.Start()
+	if deps.EnableEnvoyXds.BoolVal() {
+		deps.EnvoyXds.Start()
 		log.Info("Envoy xDS server started")
-		defer dep.EnvoyXds.Stop()
+		defer deps.EnvoyXds.Stop()
 	}
 
-	if dep.EnableWorker.BoolVal() {
-		dep.Worker.Start()
-		defer dep.Worker.Stop()
+	if deps.EnableWorker.BoolVal() {
+		deps.Worker.Start()
+		defer deps.Worker.Stop()
 	}
 
-	if dep.EnableGateway.BoolVal() || dep.EnableStore.BoolVal() || dep.EnableEnvoyXds.BoolVal() {
+	if deps.EnableGateway.BoolVal() || deps.EnableStore.BoolVal() || deps.EnableEnvoyXds.BoolVal() {
 
 		// Start and defer stop of gRPC Server
-		dep.GrpcServer.Start()
+		deps.GrpcServer.Start()
 		log.Info("gRPC server started")
-		defer dep.GrpcServer.Start()
+		defer deps.GrpcServer.Start()
 
 		// Start and defer stop of HTTP Server
-		dep.HttpServer.Start()
+		deps.HttpServer.Start()
 		log.Info("HTTP server started")
-		defer dep.HttpServer.Stop()
+		defer deps.HttpServer.Stop()
 	}
 
 	hostname, err := os.Hostname()
@@ -195,6 +173,6 @@ func main() {
 	log.Info("Application started", "hostname", hostname, "pid", pid, "uid", uid)
 
 	// Wait for interruption signal
-	internal.WaitInterruption()
+	app.WaitInterruption()
 
 }

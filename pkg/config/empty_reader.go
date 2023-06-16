@@ -3,12 +3,12 @@ package config
 import (
 	"time"
 
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 )
 
 type emptyReader bool
 
-func EmptyConfig() protomesh.Config {
+func EmptyConfig() app.Config {
 	return emptyReader(false)
 }
 

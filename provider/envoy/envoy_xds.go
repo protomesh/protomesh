@@ -14,7 +14,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/server/v3"
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	resourcepkg "github.com/protomesh/protomesh/pkg/resource"
 	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
@@ -61,9 +61,9 @@ func (i *idNameMap) Delete(key string) string {
 }
 
 type EnvoyXds[Dependency EnvoyXdsDependency] struct {
-	*protomesh.Injector[Dependency]
+	*app.Injector[Dependency]
 
-	ResourceStoreNamespace protomesh.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`
+	ResourceStoreNamespace app.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`
 
 	resourceMap map[resource.Type]*idNameMap
 

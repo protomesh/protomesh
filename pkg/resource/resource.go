@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/google/uuid"
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
 )
@@ -20,7 +20,7 @@ type ResourceStoreSynchronizerDependency interface {
 }
 
 type ResourceStoreSynchronizer[D ResourceStoreSynchronizerDependency] struct {
-	*protomesh.Injector[D]
+	*app.Injector[D]
 
 	Namespace   string
 	IndexCursor int64

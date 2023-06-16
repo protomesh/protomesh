@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/server"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
 )
@@ -15,7 +15,7 @@ type GrpcLambdaRouterDependency interface {
 }
 
 type GrpcLambdaRouter[D GrpcLambdaRouterDependency] struct {
-	*protomesh.Injector[D]
+	*app.Injector[D]
 
 	methods map[string]grpcLambdaMethodBuilder
 

@@ -1,16 +1,16 @@
 package temporal
 
 import (
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 )
 
 type TemporalBuilder[Dependency any] struct {
-	*protomesh.Injector[Dependency]
+	*app.Injector[Dependency]
 
-	Namespace protomesh.Config `config:"namespace,string" default:"default" usage:"Temporal namespace"`
-	HostPort  protomesh.Config `config:"address,string" default:"localhost:7233" usage:"Tempora server host:port"`
+	Namespace app.Config `config:"namespace,string" default:"default" usage:"Temporal namespace"`
+	HostPort  app.Config `config:"address,string" default:"localhost:7233" usage:"Tempora server host:port"`
 	// AesCodecKey    protomesh.Config `config:"aes.codec.key,string" usage:"Temporal AES codec key"`
 	// AesCodecIvSeed protomesh.Config `config:"aes.iv.seed,int64" usage:"Temporal AES codec IV rand seed"`
 }

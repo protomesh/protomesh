@@ -1,7 +1,7 @@
 package main
 
 import (
-	protomesh "github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/client"
 	workerpkg "github.com/protomesh/protomesh/pkg/worker"
 	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
@@ -23,7 +23,7 @@ type WorkerInjector interface {
 }
 
 type WorkerInstance[D WorkerDeps] struct {
-	*protomesh.Injector[D]
+	*app.Injector[D]
 
 	ResourceStore       *client.GrpcClient[WorkerInjector] `config:"resource.store"`
 	resourceStoreClient servicesv1.ResourceStoreClient

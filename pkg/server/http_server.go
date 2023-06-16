@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/config"
 	tlsprovider "github.com/protomesh/protomesh/provider/tls"
 )
 
 type HttpServer[Dependency any] struct {
-	*protomesh.Injector[any]
+	*app.Injector[any]
 
 	Server *http.Server
 
@@ -22,7 +22,7 @@ type HttpServer[Dependency any] struct {
 	HttpHandler http.Handler
 	GrpcHandler http.Handler
 
-	ShutdownTimeout protomesh.Config `config:"shutdown.timeout,duration" default:"120s" usage:"HTTP server shutdown timeout before closing"`
+	ShutdownTimeout app.Config `config:"shutdown.timeout,duration" default:"120s" usage:"HTTP server shutdown timeout before closing"`
 
 	closeCh chan error
 	addr    string

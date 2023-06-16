@@ -3,7 +3,7 @@ package config
 import (
 	"flag"
 
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 )
 
 type FlagSet interface {
@@ -12,17 +12,17 @@ type FlagSet interface {
 }
 
 type flagSource struct {
-	keyCase protomesh.KeyCase
+	keyCase app.KeyCase
 	flagSet FlagSet
-	configs map[string]protomesh.Config
+	configs map[string]app.Config
 	onlySet map[string]bool
 }
 
-func NewFlagSource(keyCase protomesh.KeyCase, flagSet FlagSet) protomesh.ConfigSource {
+func NewFlagSource(keyCase app.KeyCase, flagSet FlagSet) app.ConfigSource {
 	return &flagSource{
 		keyCase: keyCase,
 		flagSet: flagSet,
-		configs: make(map[string]protomesh.Config),
+		configs: make(map[string]app.Config),
 		onlySet: make(map[string]bool),
 	}
 }
@@ -31,7 +31,7 @@ func (f *flagSource) Load() error {
 
 	f.flagSet.Visit(func(fg *flag.Flag) {
 
-		key := protomesh.ConvertKeyCase(fg.Name, f.keyCase)
+		key := app.ConvertKeyCase(fg.Name, f.keyCase)
 
 		f.onlySet[key] = true
 
@@ -39,7 +39,7 @@ func (f *flagSource) Load() error {
 
 	f.flagSet.VisitAll(func(fg *flag.Flag) {
 
-		key := protomesh.ConvertKeyCase(fg.Name, f.keyCase)
+		key := app.ConvertKeyCase(fg.Name, f.keyCase)
 		val := fg.Value.String()
 
 		if len(val) == 0 {
@@ -53,7 +53,7 @@ func (f *flagSource) Load() error {
 	return nil
 }
 
-func (f *flagSource) Get(k string) protomesh.Config {
+func (f *flagSource) Get(k string) app.Config {
 
 	if c, ok := f.configs[k]; ok {
 		return c

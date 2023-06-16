@@ -6,7 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/protomesh/protomesh"
+	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/client"
 	"github.com/protomesh/protomesh/provider/postgres"
 	"google.golang.org/grpc"
@@ -33,9 +33,9 @@ type StoreInjector interface {
 }
 
 type StoreInstance[D StoreDeps] struct {
-	*protomesh.Injector[D]
+	*app.Injector[D]
 
-	ResourceStoreProvider protomesh.Config `config:"provider,str" usage:"Resource store persistence layer provider"`
+	ResourceStoreProvider app.Config `config:"provider,str" usage:"Resource store persistence layer provider"`
 
 	SqlClient *client.SqlClient[StoreInjector] `config:"sql"`
 
