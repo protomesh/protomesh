@@ -1,4 +1,4 @@
-enable.proxy = true
+enable.gateway = true
 
 enable.store = false
 enable.worker = false
@@ -9,10 +9,6 @@ enable.envoy.xds = false
 dev = true
 json = false
 level = "debug"
-
-[aws]
-
-enable.grpc.lambda.router = true
 
 [grpc]
 
@@ -32,15 +28,15 @@ server.shutdown.timeout.duration = "2m"
 listener.address = "0.0.0.0:5770"
 protocol = "tcp"
 
-[proxy]
+[gateway]
 
-grpc.router = "AwsLambda"
+handlers = "AwsLambda"
 
-[proxy.service]
+[gateway.service]
 
-resource.store.namespace = "proxy"
+resource.store.namespace = "gateway"
 
-[proxy.resource.store]
+[gateway.resource.store]
 
 client.certificate.path = ""
 client.enable.tls = true

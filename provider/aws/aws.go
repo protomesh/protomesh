@@ -14,8 +14,7 @@ type AwsBuilder[D any] struct {
 
 	AwsConfig aws.Config
 
-	EnableGrpcLambdaRouter app.Config `config:"enable.grpc.lambda.router,bool" default:"false" usage:"Enable gRPC Lambda router"`
-	DynamoDBEndpoint       app.Config `config:"dynamodb.endpoint.url,str" usage:"Custom DynamoDB Endpoint url"`
+	DynamoDBEndpoint app.Config `config:"dynamodb.endpoint.url,str" usage:"Custom DynamoDB Endpoint url"`
 }
 
 func (a *AwsBuilder[D]) Initialize() {

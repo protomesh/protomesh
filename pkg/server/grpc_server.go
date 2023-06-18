@@ -3,6 +3,7 @@ package server
 import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/protomesh/go-app"
+	"github.com/protomesh/protomesh/pkg/gateway"
 
 	// "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	// grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -10,12 +11,16 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+type GrpcGateway interface {
+	MatchGrpc(stream grpc.ServerStream) (*gateway.GrpcCall, error)
+}
+
 type GrpcServer[Dependency any] struct {
 	*app.Injector[Dependency]
 
 	*grpc.Server
 
-	GrpcProxy *GrpcProxy
+	Gateway GrpcGateway
 
 	EnableReflection app.Config `config:"enable.reflection,bool" default:"false" usage:"Enable gRPC server reflection"`
 }
@@ -39,14 +44,14 @@ func (g *GrpcServer[Dependency]) Initialize() {
 		),
 	}
 
-	if g.GrpcProxy != nil {
+	if g.Gateway != nil {
 
 		log.Info("Enabling gRPC proxy for unknown services")
 
 		opts = append(
 			opts,
 			grpc.CustomCodec(Codec()),
-			grpc.UnknownServiceHandler(g.GrpcProxy.Handle),
+			grpc.UnknownServiceHandler(GrpcHandlerFromGateway(g.Gateway)),
 		)
 
 	}

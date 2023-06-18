@@ -3,23 +3,30 @@ package server
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/config"
+	"github.com/protomesh/protomesh/pkg/gateway"
 	tlsprovider "github.com/protomesh/protomesh/provider/tls"
 )
 
-type HttpServer[Dependency any] struct {
+type HttpGateway interface {
+	MatchHttp(res http.ResponseWriter, req *http.Request) (*gateway.HttpCall, error)
+}
+
+type HttpServer[D any] struct {
 	*app.Injector[any]
 
 	Server *http.Server
 
 	TlsBuilder *tlsprovider.TlsBuilder[any] `config:"tls"`
 
-	HttpHandler http.Handler
+	Gateway HttpGateway
+
 	GrpcHandler http.Handler
 
 	ShutdownTimeout app.Config `config:"shutdown.timeout,duration" default:"120s" usage:"HTTP server shutdown timeout before closing"`
@@ -28,7 +35,7 @@ type HttpServer[Dependency any] struct {
 	addr    string
 }
 
-func (h *HttpServer[Dependency]) AssertBeforeStart() error {
+func (h *HttpServer[D]) AssertBeforeStart() error {
 
 	if h.TlsBuilder == nil {
 		return errors.New("TlsBuilder is a mandatory attribute in the HttpServer")
@@ -48,7 +55,7 @@ func (h *HttpServer[Dependency]) AssertBeforeStart() error {
 
 }
 
-func (h *HttpServer[Dependency]) Start() {
+func (h *HttpServer[D]) Start() {
 
 	h.AssertBeforeStart()
 
@@ -81,7 +88,7 @@ func (h *HttpServer[Dependency]) Start() {
 
 }
 
-func (h *HttpServer[Dependency]) Stop() {
+func (h *HttpServer[D]) Stop() {
 
 	log := h.Log()
 
@@ -104,14 +111,47 @@ func (h *HttpServer[Dependency]) Stop() {
 
 }
 
-func (h *HttpServer[Dependency]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *HttpServer[D]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	log := h.Log()
+
+	requestId := r.Header.Get("X-Request-Id")
+	if len(requestId) > 0 {
+		log = log.With("requestId", requestId)
+	}
 
 	contentType := r.Header.Get("Content-Type")
 
-	if h.HttpHandler != nil && strings.Contains(contentType, "application/grpc") {
+	if h.GrpcHandler != nil && strings.Contains(contentType, "application/grpc") {
 		h.GrpcHandler.ServeHTTP(w, r)
-	} else {
-		h.HttpHandler.ServeHTTP(w, r)
+		return
+	}
+
+	call, err := h.Gateway.MatchHttp(w, r)
+
+	if err == http.ErrNotSupported {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Error("Error matching http call", "error", err)
+		return
+	}
+
+	for _, handler := range call.Handlers {
+
+		err := handler.Call()
+		if err == http.ErrAbortHandler {
+			return
+		} else if err == io.EOF {
+			continue
+		} else if err != nil {
+			w.WriteHeader(http.StatusBadGateway)
+			log.Error("Error calling http handler", "error", err)
+			return
+		}
 	}
 
 }

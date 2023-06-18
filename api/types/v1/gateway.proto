@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package protomesh.types.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/descriptor.proto";
+import "terraform/annotations.proto";
+import "api/types/v1/networking.proto";
+
+option go_package = "github.com/protomesh/protomesh/proto/api/types/v1;typesv1";
+
+// Gateway is a Protomesh gateway policy.
+message GatewayPolicy {
+  option (protomesh.terraform.message_schema) = {
+    is_resource : false
+    generate : true
+  };
+
+  // Name of the gateway policy.
+  oneof source {
+    HttpSource http = 1;
+    GrpcSource grpc = 2;
+  }
+
+  // Handlers are the handlers to invoke when the source matches.
+  message Handler {
+    option (protomesh.terraform.message_schema) = {
+      is_resource : false
+      generate : true
+    };
+    
+    oneof handler {
+      AwsHandler aws = 1;
+    }
+
+  }
+
+  // Handlers are the handlers to invoke when the source matches.
+  // Each result of each handler is passed to the next handler.
+  // When an error occurs, the error is returned to the client.
+  repeated Handler handlers = 3;
+
+}
+
+// HttpSource is used by the Protomesh gateway to handle HTTP requests.
+message HttpSource {
+  option (protomesh.terraform.message_schema) = {
+    is_resource : false
+    generate : true
+  };
+
+  // HTTP method to match against the URL.
+  // If you speicify HTT_METHOD_UNDEFINED, the method is not considered when
+  // matching.
+  protomesh.types.v1.HttpMethod method = 1;
+
+  // Path to match against the URL.
+  string path = 2;
+
+  // If true, the path must match exactly.
+  // Otherwise, the path must match using the prefix match semantics (Radix Tree match longest operation).
+  bool exact_path_match = 3;
+}
+
+// GrpcSource is used by the Protomesh gateway to handle gRPC method calls.
+message GrpcSource {
+  option (protomesh.terraform.message_schema) = {
+    is_resource : false
+    generate : true
+  };
+
+  // Full method name of the gRPC method (/my.package.GrpcService/GrpcMethod).
+  string method_name = 1;
+
+  // If true, the method name must match exactly.
+  // Otherwise, the method name must match using the prefix match semantics (Radix Tree match longest operation).
+  bool exact_method_name_match = 2;
+}
+
+message AwsHandler {
+  option (protomesh.terraform.message_schema) = {
+    is_resource : false
+    generate : true
+  };
+
+  // Lambda function name or ARN.
+  message LambdaFunction {
+    option (protomesh.terraform.message_schema) = {
+      is_resource : false
+      generate : true
+    };
+
+    // Lambda function name or ARN.
+    string function_name = 1;
+    // Version name of Lambda (default $LATEST).
+    string qualifier = 2;
+  }
+
+  // handler is the AWS handler specifier.
+  oneof handler {
+    // Lambda function handler.
+    LambdaFunction lambda = 1;
+  }
+}

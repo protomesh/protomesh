@@ -23,11 +23,23 @@ message NetworkingNode {
     Service service = 2;
     // RoutingPolicy node.
     RoutingPolicy routing_policy = 3;
-    // AwsLambdaGrpc node.
-    AwsLambdaGrpc aws_lambda_grpc = 4;
     // InstanceSet node.
     InstanceSet instance_set = 5;
   }
+}
+
+// HttpMethod is the HTTP method.
+enum HttpMethod {
+  HTTP_METHOD_UNDEFINED = 0;
+  HTTP_METHOD_GET = 1;
+  HTTP_METHOD_HEAD = 2;
+  HTTP_METHOD_POST = 3;
+  HTTP_METHOD_PUT = 4;
+  HTTP_METHOD_DELETE = 5;
+  HTTP_METHOD_CONNECT = 6;
+  HTTP_METHOD_OPTIONS = 7;
+  HTTP_METHOD_TRACE = 8;
+  HTTP_METHOD_PATCH = 9;
 }
 
 // Transport protocols.
@@ -299,20 +311,4 @@ message RoutingPolicy {
 
   // Domain to match (you can use wildcard domains).
   string domain = 5;
-}
-
-// AwsLambdaGrpc is used by the Protomesh gateway to handle gRPC method calls
-// backed by AWS Lambda functions.
-message AwsLambdaGrpc {
-  option (protomesh.terraform.message_schema) = {
-    is_resource : false
-    generate : true
-  };
-  
-  // Full method name of the gRPC method (/my.package.GrpcService/GrpcMethod).
-  string full_method_name = 1;
-  // Lambda function name or ARN.
-  string function_name = 2;
-  // Version name of Lambda (default $LATEST).
-  string qualifier = 3;
 }

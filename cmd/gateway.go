@@ -9,7 +9,6 @@ import (
 	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/client"
 	"github.com/protomesh/protomesh/pkg/gateway"
-	"github.com/protomesh/protomesh/pkg/server"
 	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
 	awsprovider "github.com/protomesh/protomesh/provider/aws"
 	"google.golang.org/grpc"
@@ -19,16 +18,9 @@ var (
 	_ GatewayInjector = &GatewayInstance[*root]{}
 )
 
-type grpcGatewayRouter string
-
-const (
-	lambda_grpcGatewayRouter grpcGatewayRouter = "awslambda"
-)
-
 type GatewayDeps interface {
 	GetAwsConfig() aws.Config
 	GetGrpcServer() *grpc.Server
-	SetGrpcProxyRouter(router server.GrpcRouter)
 }
 
 type GatewayInjector interface {
@@ -45,19 +37,19 @@ type GatewayInstance[D GatewayDeps] struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	GrpcProxyRouter app.Config `config:"grpc.router,str" usage:"Which grpc proxy router to use"`
+	Handlers app.Config `config:"handlers,str" usage:"Enabled gateway handlers, separated by comma"`
 
 	Gateway      *gateway.Gateway[GatewayInjector] `config:"service"`
 	gatewayErrCh <-chan error
 
-	GrpcLambdaRouter *awsprovider.GrpcLambdaRouter[GatewayInjector] `config:"grpc.to.lambda"`
+	AwsLambdaHandler *awsprovider.LambdaGatewayHandler[GatewayInjector] `config:"aws.lambda"`
 }
 
 func NewGatewayInstance[D GatewayDeps]() *GatewayInstance[D] {
 	return &GatewayInstance[D]{
 		ResourceStore:    &client.GrpcClient[GatewayInjector]{},
 		Gateway:          &gateway.Gateway[GatewayInjector]{},
-		GrpcLambdaRouter: &awsprovider.GrpcLambdaRouter[GatewayInjector]{},
+		AwsLambdaHandler: &awsprovider.LambdaGatewayHandler[GatewayInjector]{},
 	}
 }
 
@@ -73,28 +65,29 @@ func (p *GatewayInstance[D]) Initialize() {
 
 	log := p.Log()
 
-	compRouter := server.NewCompositeGrpcRouter()
+	handlerTypes := strings.Split(p.Handlers.StringVal(), ",")
+
 	handlers := []gateway.GatewayHandler{}
 
-	grpcGatewayRouterStr := strings.ToLower(p.GrpcProxyRouter.StringVal())
+	for _, handlerType := range handlerTypes {
 
-	switch grpcGatewayRouter(grpcGatewayRouterStr) {
+		switch gateway.HandlerType(handlerType) {
 
-	case lambda_grpcGatewayRouter:
+		case gateway.HandlerTypeAwsLambda:
 
-		p.GrpcLambdaRouter.Initialize()
+			p.AwsLambdaHandler.Initialize()
 
-		compRouter = append(compRouter, p.GrpcLambdaRouter)
-		handlers = append(handlers, p.GrpcLambdaRouter)
+			log.Info("Initialized AWS Lambda handler")
 
-		log.Info("Initialized gRPC proxy router using gRPC Lambda Router (AWS)")
+			handlers = append(handlers, p.AwsLambdaHandler)
 
-	default:
-		log.Panic("Unknown gRPC proxy router", "grpcProxyRouter", grpcGatewayRouterStr)
+		default:
+			log.Panic("Unknown gateway handler", "handlerType", handlerType)
+
+		}
 
 	}
 
-	p.Dependency().SetGrpcProxyRouter(compRouter)
 	p.Gateway.Initialize(handlers...)
 
 }

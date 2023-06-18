@@ -47,7 +47,7 @@ func newRoot() *root {
 	return &root{
 		Aws: &awsprovider.AwsBuilder[*root]{},
 		HttpServer: &server.HttpServer[*root]{
-			HttpHandler: http.NewServeMux(),
+
 			GrpcHandler: grpcServer,
 		},
 		httpServeMux: http.NewServeMux(),
@@ -67,12 +67,6 @@ func (i *root) Dependency() *root {
 
 func (i *root) GetGrpcServer() *grpc.Server {
 	return i.GrpcServer.Server
-}
-
-func (i *root) SetGrpcProxyRouter(router server.GrpcRouter) {
-	i.GrpcServer.GrpcProxy = &server.GrpcProxy{
-		Router: router,
-	}
 }
 
 func (i *root) GetAwsConfig() aws.Config {
@@ -102,6 +96,10 @@ func main() {
 
 	if deps.EnableGateway.BoolVal() {
 		deps.Gateway.Initialize()
+
+		deps.HttpServer.Gateway = deps.Gateway.Gateway
+		deps.GrpcServer.Gateway = deps.Gateway.Gateway
+
 		log.Info("Gateway initialized")
 	}
 

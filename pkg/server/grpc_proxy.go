@@ -1,98 +1,65 @@
 package server
 
 import (
-	"context"
 	"errors"
 	"io"
 
+	"github.com/protomesh/protomesh/pkg/gateway"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
-type GrpcMethodHandler interface {
-	Call([]byte) error
-	GetResult() ([]byte, error)
-	GetOutgoingMetadata() metadata.MD
-}
+func GrpcHandlerFromGateway(g GrpcGateway) grpc.StreamHandler {
 
-type GrpcCallInformation struct {
-	FullMethodName string
-}
+	return func(srv interface{}, stream grpc.ServerStream) error {
 
-type GrpcRouter interface {
-	GetMethod(context.Context, *GrpcCallInformation) GrpcMethodHandler
-}
+		call, err := g.MatchGrpc(stream)
+		if err != nil {
+			return err
+		}
 
-type GrpcProxy struct {
-	Router GrpcRouter
-}
+		for _, handler := range call.Handlers {
 
-func (gp *GrpcProxy) Handle(srv interface{}, serverStream grpc.ServerStream) error {
+			receiveCh := ReceiveFrom(stream, handler)
+			sendCh := SendFrom(stream, handler)
 
-	fullMethodName, ok := grpc.MethodFromServerStream(serverStream)
-	if !ok {
-		return status.Errorf(codes.Unimplemented, "%s does not exists", fullMethodName)
-	}
-	ctx := serverStream.Context()
+		events:
+			for i := 0; i < 4; i++ {
 
-	callInfo := &GrpcCallInformation{
-		FullMethodName: fullMethodName,
-	}
+				select {
 
-	handler := gp.Router.GetMethod(ctx, callInfo)
-	if handler == nil {
-		return status.Errorf(codes.Unimplemented, "%s does not have handler", fullMethodName)
-	}
+				case receiveErr, ok := <-receiveCh:
+					if !ok {
+						receiveCh = nil
+						continue events
+					}
+					if receiveErr != nil {
+						return receiveErr
+					}
 
-	// handler, err := method.Handle(ctx)
-	// if err != nil {
+				case sendErr, ok := <-sendCh:
+					if !ok {
+						sendCh = nil
+						continue events
+					}
+					if sendErr != nil {
+						return sendErr
+					}
 
-	// 	_, ok := status.FromError(err)
-	// 	if ok {
-	// 		return err
-	// 	}
+				}
 
-	// 	return status.Errorf(codes.Internal, "Internal error: %s", err.Error())
-
-	// }
-
-	receiveCh := ReceiveFrom(serverStream, handler)
-	sendCh := SendFrom(serverStream, handler)
-
-events:
-	for i := 0; i < 4; i++ {
-
-		select {
-
-		case receiveErr, ok := <-receiveCh:
-			if !ok {
-				receiveCh = nil
-				continue events
-			}
-			if receiveErr != nil {
-				return receiveErr
-			}
-
-		case sendErr, ok := <-sendCh:
-			if !ok {
-				sendCh = nil
-				continue events
-			}
-			if sendErr != nil {
-				return sendErr
 			}
 
 		}
 
-	}
+		return nil
 
-	return nil
+	}
 
 }
 
-func SendFrom(serverStream grpc.ServerStream, handler GrpcMethodHandler) <-chan error {
+func SendFrom(serverStream grpc.ServerStream, handler gateway.GrpcHandler) <-chan error {
 
 	errCh := make(chan error)
 
@@ -105,7 +72,7 @@ func SendFrom(serverStream grpc.ServerStream, handler GrpcMethodHandler) <-chan 
 
 			for i := 0; ; i++ {
 
-				payload, resErr := handler.GetResult()
+				payload, resErr := handler.Result()
 				if resErr != nil && resErr != io.EOF {
 					_, ok := status.FromError(resErr)
 					if ok {
@@ -146,7 +113,7 @@ func SendFrom(serverStream grpc.ServerStream, handler GrpcMethodHandler) <-chan 
 
 }
 
-func ReceiveFrom(serverStream grpc.ServerStream, handler GrpcMethodHandler) <-chan error {
+func ReceiveFrom(serverStream grpc.ServerStream, handler gateway.GrpcHandler) <-chan error {
 
 	errCh := make(chan error)
 

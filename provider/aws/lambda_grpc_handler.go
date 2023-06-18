@@ -12,18 +12,20 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
-	"github.com/protomesh/protomesh/pkg/server"
+	"github.com/protomesh/go-app"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
-type grpcLambdaMethodBuilder func(ctx context.Context) server.GrpcMethodHandler
+type lambdaGrpcHandler struct {
+	log app.Logger
 
-type grpcLambdaMethod struct {
-	route        *typesv1.AwsLambdaGrpc
-	lambdaClient *lambda.Client
+	fullMethodName string
+	param          *typesv1.AwsHandler_LambdaFunction
+
+	lambdaCli *lambda.Client
 
 	ctx              context.Context
 	incomingMetadata metadata.MD
@@ -33,35 +35,16 @@ type grpcLambdaMethod struct {
 	outgoingMetadata metadata.MD
 }
 
-func newGrpcLambdaMethodBuilder(route *typesv1.AwsLambdaGrpc, lambdaClient *lambda.Client) grpcLambdaMethodBuilder {
-
-	return func(ctx context.Context) server.GrpcMethodHandler {
-
-		incomingMetadata, _ := metadata.FromIncomingContext(ctx)
-
-		return &grpcLambdaMethod{
-			route:        route,
-			lambdaClient: lambdaClient,
-
-			ctx:              ctx,
-			incomingMetadata: incomingMetadata,
-
-			waitCall: make(chan interface{}),
-		}
-	}
-
-}
-
-func (g *grpcLambdaMethod) Call(payload []byte) error {
+func (l *lambdaGrpcHandler) Call(payload []byte) error {
 
 	defer func() {
-		g.waitCall <- nil
-		close(g.waitCall)
+		l.waitCall <- nil
+		close(l.waitCall)
 	}()
 
 	req := &events.APIGatewayProxyRequest{
-		Path:              g.route.FullMethodName,
-		MultiValueHeaders: g.incomingMetadata,
+		Path:              l.fullMethodName,
+		MultiValueHeaders: l.incomingMetadata,
 		Body:              string(payload[:]),
 		IsBase64Encoded:   false,
 	}
@@ -71,10 +54,10 @@ func (g *grpcLambdaMethod) Call(payload []byte) error {
 		return err
 	}
 
-	out, err := g.lambdaClient.Invoke(g.ctx, &lambda.InvokeInput{
-		FunctionName:   aws.String(g.route.FunctionName),
+	out, err := l.lambdaCli.Invoke(l.ctx, &lambda.InvokeInput{
+		FunctionName:   aws.String(l.param.FunctionName),
 		InvocationType: types.InvocationTypeRequestResponse,
-		Qualifier:      aws.String(g.route.Qualifier),
+		Qualifier:      aws.String(l.param.Qualifier),
 		Payload:        in,
 	})
 	if out.FunctionError != nil {
@@ -89,7 +72,7 @@ func (g *grpcLambdaMethod) Call(payload []byte) error {
 		return err
 	}
 
-	g.outgoingMetadata = metadata.Join(metadata.New(res.Headers), res.MultiValueHeaders)
+	l.outgoingMetadata = metadata.Join(metadata.New(res.Headers), res.MultiValueHeaders)
 
 	switch res.StatusCode {
 
@@ -144,26 +127,23 @@ func (g *grpcLambdaMethod) Call(payload []byte) error {
 			return err
 		}
 
-		g.result = result
+		l.result = result
 
-	} else {
-		g.result = []byte(res.Body)
+		return io.EOF
+
 	}
+
+	l.result = []byte(res.Body)
 
 	return io.EOF
 
 }
 
-func (g *grpcLambdaMethod) GetResult() ([]byte, error) {
-
-	<-g.waitCall
-
-	return g.result, io.EOF
-
+func (l *lambdaGrpcHandler) Result() ([]byte, error) {
+	<-l.waitCall
+	return l.result, io.EOF
 }
 
-func (g *grpcLambdaMethod) GetOutgoingMetadata() metadata.MD {
-
-	return g.outgoingMetadata
-
+func (l *lambdaGrpcHandler) GetOutgoingMetadata() metadata.MD {
+	return l.outgoingMetadata
 }

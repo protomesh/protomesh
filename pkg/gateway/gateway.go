@@ -2,17 +2,16 @@ package gateway
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/resource"
 	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
-
-type GatewayHandler interface {
-	// Context, active nodes and dropped nodes
-	ProcessNodes(context.Context, []*typesv1.NetworkingNode, []*typesv1.NetworkingNode) error
-}
 
 type GatewayDependency interface {
 	GetResourceStoreClient() servicesv1.ResourceStoreClient
@@ -23,62 +22,127 @@ type Gateway[D GatewayDependency] struct {
 
 	ResourceStoreNamespace app.Config `config:"resource.store.namespace,str" default:"default" usage:"Resource store namespace to use"`
 
-	handlers []GatewayHandler
+	handlerMatcher handlerMatcher
 
-	updated []*typesv1.NetworkingNode
-	dropped []*typesv1.NetworkingNode
+	// Maps of resource id to policy.
+	active  map[string]*typesv1.GatewayPolicy
+	updated map[string]*typesv1.GatewayPolicy
+	dropped map[string]*typesv1.GatewayPolicy
+
+	grpcMatcher *sourceMatcher
+	httpMatcher *sourceMatcher
 }
 
-func (ep *Gateway[D]) Initialize(handlers ...GatewayHandler) {
+func (g *Gateway[D]) Initialize(handlers ...GatewayHandler) {
 
-	ep.handlers = handlers
+	g.handlerMatcher = newHandlerMatcher()
+	g.handlerMatcher.fromHandlersSlice(handlers)
+
+	g.grpcMatcher = newSourceMatcher()
+	g.httpMatcher = newSourceMatcher()
+
+	g.active = make(map[string]*typesv1.GatewayPolicy)
 
 }
 
-func (ep *Gateway[D]) BeforeBatch(ctx context.Context) error {
+func (g *Gateway[D]) BeforeBatch(ctx context.Context) error {
 
-	ep.updated = []*typesv1.NetworkingNode{}
-	ep.dropped = []*typesv1.NetworkingNode{}
+	g.updated = make(map[string]*typesv1.GatewayPolicy)
+	g.dropped = make(map[string]*typesv1.GatewayPolicy)
 
 	return nil
 
 }
 
-func (ep *Gateway[D]) OnUpdated(ctx context.Context, updatedRes *typesv1.Resource) error {
+func (g *Gateway[D]) OnUpdated(ctx context.Context, updatedRes *typesv1.Resource) error {
 
-	edge := new(typesv1.NetworkingNode)
+	policy := new(typesv1.GatewayPolicy)
 
-	err := updatedRes.Spec.UnmarshalTo(edge)
+	err := updatedRes.Spec.UnmarshalTo(policy)
 	if err != nil {
 		return err
 	}
 
-	ep.updated = append(ep.updated, edge)
+	g.updated[updatedRes.Id] = policy
 
 	return nil
 
 }
 
-func (ep *Gateway[D]) OnDropped(ctx context.Context, droppedRes *typesv1.Resource) error {
+func (g *Gateway[D]) OnDropped(ctx context.Context, droppedRes *typesv1.Resource) error {
 
-	edge := new(typesv1.NetworkingNode)
+	policy := new(typesv1.GatewayPolicy)
 
-	err := droppedRes.Spec.UnmarshalTo(edge)
+	err := droppedRes.Spec.UnmarshalTo(policy)
 	if err != nil {
 		return err
 	}
 
-	ep.dropped = append(ep.dropped, edge)
+	g.dropped[droppedRes.Id] = policy
 
 	return nil
 
 }
 
-func (ep *Gateway[D]) AfterBatch(ctx context.Context) error {
+func (g *Gateway[D]) AfterBatch(ctx context.Context) error {
 
-	for _, handler := range ep.handlers {
+	dropped := map[HandlerType][]*typesv1.GatewayPolicy{}
+	updated := map[HandlerType][]*typesv1.GatewayPolicy{}
 
-		if err := handler.ProcessNodes(ctx, ep.updated, ep.dropped); err != nil {
+	for resourceId := range g.dropped {
+
+		policy, ok := g.active[resourceId]
+		if ok {
+
+			delete(g.active, resourceId)
+
+			switch policy.Source.(type) {
+
+			case *typesv1.GatewayPolicy_Grpc:
+				g.grpcMatcher.dropPolicy(policy)
+
+			case *typesv1.GatewayPolicy_Http:
+				g.httpMatcher.dropPolicy(policy)
+
+			}
+
+			addPolicyToHandlerMap(dropped, policy)
+
+		}
+
+	}
+
+	for resourceId, policy := range g.updated {
+
+		g.active[resourceId] = policy
+
+		switch policy.Source.(type) {
+
+		case *typesv1.GatewayPolicy_Grpc:
+			g.grpcMatcher.addPolicy(policy)
+
+		case *typesv1.GatewayPolicy_Http:
+			g.httpMatcher.addPolicy(policy)
+
+		}
+
+		addPolicyToHandlerMap(updated, policy)
+
+	}
+
+	for handlerType, handler := range g.handlerMatcher {
+
+		updatedPolicies, ok := updated[handlerType]
+		if !ok {
+			updatedPolicies = make([]*typesv1.GatewayPolicy, 0)
+		}
+
+		droppedPolicies, ok := dropped[handlerType]
+		if !ok {
+			updatedPolicies = make([]*typesv1.GatewayPolicy, 0)
+		}
+
+		if err := handler.ProcessPolicies(ctx, updatedPolicies, droppedPolicies); err != nil {
 			return err
 		}
 
@@ -88,16 +152,90 @@ func (ep *Gateway[D]) AfterBatch(ctx context.Context) error {
 
 }
 
-func (ep *Gateway[D]) Sync(ctx context.Context) <-chan error {
+func (g *Gateway[D]) Sync(ctx context.Context) <-chan error {
 
 	sync := &resource.ResourceStoreSynchronizer[D]{
-		Injector:    ep.Injector,
-		Namespace:   ep.ResourceStoreNamespace.StringVal(),
+		Injector:    g.Injector,
+		Namespace:   g.ResourceStoreNamespace.StringVal(),
 		IndexCursor: 0,
 
-		EventHandler: ep,
+		EventHandler: g,
 	}
 
 	return sync.Sync(ctx)
+
+}
+
+func (g *Gateway[D]) MatchGrpc(stream grpc.ServerStream) (*GrpcCall, error) {
+
+	log := g.Log()
+
+	fullMethodName, ok := grpc.MethodFromServerStream(stream)
+	if !ok {
+		return nil, status.Errorf(codes.Unimplemented, "Unknown method: %s", fullMethodName)
+	}
+
+	policy := g.grpcMatcher.matchPolicy(fullMethodName)
+	if policy == nil {
+		return nil, status.Errorf(codes.Unimplemented, "Unknown method: %s", fullMethodName)
+	}
+
+	call := &GrpcCall{
+		Policy:   policy,
+		Stream:   stream,
+		Handlers: make([]GrpcHandler, 0),
+	}
+
+	for _, handlerOneOf := range policy.Handlers {
+
+		handlerParam, handlerType := getHandlerFromOneOf(handlerOneOf)
+
+		handler, ok := g.handlerMatcher[handlerType]
+		if !ok {
+			log.Error("Unknown handler type", "handlerType", handlerType)
+			continue
+		}
+
+		call.Handlers = append(call.Handlers, handler.HandleGrpc(stream.Context(), handlerParam, call))
+
+	}
+
+	return call, nil
+
+}
+
+func (g *Gateway[D]) MatchHttp(res http.ResponseWriter, req *http.Request) (*HttpCall, error) {
+
+	log := g.Log()
+
+	methodName := typesv1.HttpMethod_name[int32(fromHttpMethodToProtomeshHttpMethod(req.Method))]
+
+	policy := g.httpMatcher.matchPolicy(req.URL.Path, methodName)
+	if policy == nil {
+		return nil, http.ErrNotSupported
+	}
+
+	call := &HttpCall{
+		Policy:   policy,
+		Response: res,
+		Request:  req,
+		Handlers: make([]HttpHandler, 0),
+	}
+
+	for _, handlerOneOf := range policy.Handlers {
+
+		handlerParam, handlerType := getHandlerFromOneOf(handlerOneOf)
+
+		handler, ok := g.handlerMatcher[handlerType]
+		if !ok {
+			log.Error("Unknown handler type", "handlerType", handlerType)
+			continue
+		}
+
+		call.Handlers = append(call.Handlers, handler.HandleHttp(req.Context(), handlerParam, call))
+
+	}
+
+	return call, nil
 
 }

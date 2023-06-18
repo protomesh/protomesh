@@ -14,7 +14,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/lib/pq v1.10.9
-	github.com/protomesh/go-app v0.1.0
+	github.com/protomesh/go-app v0.2.0
 	github.com/protomesh/protoc-gen-terraform v0.0.0-20230610125507-365cb2da5fec
 	github.com/rubenv/sql-migrate v1.4.0
 	github.com/tidwall/gjson v1.14.4
@@ -59,7 +59,7 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
-	github.com/stretchr/testify v1.8.2 // indirect
+	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
