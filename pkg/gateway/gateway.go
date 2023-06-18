@@ -60,7 +60,8 @@ func (g *Gateway[D]) OnUpdated(ctx context.Context, updatedRes *typesv1.Resource
 
 	err := updatedRes.Spec.UnmarshalTo(policy)
 	if err != nil {
-		return err
+		g.Log().Warn("Skipping updated resource with invalid gateway spec", "resource", updatedRes.Id, "error", err)
+		return nil
 	}
 
 	g.updated[updatedRes.Id] = policy
@@ -75,7 +76,8 @@ func (g *Gateway[D]) OnDropped(ctx context.Context, droppedRes *typesv1.Resource
 
 	err := droppedRes.Spec.UnmarshalTo(policy)
 	if err != nil {
-		return err
+		g.Log().Warn("Skipping dropped resource with invalid gateway spec", "resource", droppedRes.Id, "error", err)
+		return nil
 	}
 
 	g.dropped[droppedRes.Id] = policy

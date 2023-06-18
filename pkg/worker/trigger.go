@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/protomesh/protomesh/pkg/config"
 	"github.com/protomesh/protomesh/pkg/logging"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
 	"go.temporal.io/api/enums/v1"
@@ -12,18 +11,6 @@ import (
 	"go.temporal.io/sdk/client"
 	tmemporalsdk "go.temporal.io/sdk/temporal"
 )
-
-func (w *Worker[Dependency]) TriggerFromProtoJson(ctx context.Context, sourceFormat config.ProtoJson_SourceFormat, buf []byte) error {
-
-	typedRes := &typesv1.TypedResource{}
-
-	err := config.ProtoJsonUnmarshal(buf, sourceFormat, typedRes)
-	if err != nil {
-		return err
-	}
-
-	return w.Trigger(ctx, typedRes.GetTrigger())
-}
 
 func (w *Worker[Dependency]) Trigger(ctx context.Context, trigger *typesv1.Trigger) error {
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
+	"github.com/iancoleman/strcase"
 	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/client"
 	"github.com/protomesh/protomesh/pkg/gateway"
@@ -71,7 +72,7 @@ func (p *GatewayInstance[D]) Initialize() {
 
 	for _, handlerType := range handlerTypes {
 
-		switch gateway.HandlerType(handlerType) {
+		switch gateway.HandlerType(strcase.ToSnake(handlerType)) {
 
 		case gateway.HandlerTypeAwsLambda:
 

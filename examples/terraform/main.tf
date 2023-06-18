@@ -21,17 +21,35 @@ provider "protomesh" {
 resource "random_uuid" "ping_pong_do_pong" {
 }
 
-resource "protomesh_aws_lambda_grpc" "ping_pong_do_pong" {
+resource "protomesh_gateway_policy" "ping_pong_do_pong" {
 
-  namespace = "proxy"
+  namespace = "gateway"
 
   resource_id = random_uuid.ping_pong_do_pong.result
   name        = "Route to PingPong.DoPong method"
 
-  node {
-    full_method_name = "/protomesh.services.v1.PingPongService/DoPing"
-    function_name    = "protomeshPingback"
-    qualifier        = "$LATEST"
+  policy {
+
+    source {
+      grpc {
+        method_name = "/protomesh.services.v1.PingPongService/DoPing"
+        exact_method_name_match = true
+      }
+    }
+    
+    handlers {
+      handler {
+        aws {
+          handler {
+            lambda {
+              function_name = "protomeshPingback"
+              qualifier     = "$LATEST"
+            }
+          }
+        }
+      }
+    }
+
   }
 
 }
