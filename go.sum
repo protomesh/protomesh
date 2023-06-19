@@ -969,6 +969,8 @@ github.com/prometheus/procfs v0.0.0-20190507164030-5867b95ac084/go.mod h1:TjEm7z
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
 github.com/protomesh/go-app v0.2.0 h1:YqYN0eE6aiFwPcxM4AoLqmoNLmbeZG4764xOusexuok=
 github.com/protomesh/go-app v0.2.0/go.mod h1:hIeBScLywUnEcktoP+iblwhGg4xriVsYLS2lpS52/rg=
+github.com/protomesh/go-app v0.2.1 h1:chPhvi8urwHdlvM5jXdnCxzgtMIcV5TebF409jCJONc=
+github.com/protomesh/go-app v0.2.1/go.mod h1:hIeBScLywUnEcktoP+iblwhGg4xriVsYLS2lpS52/rg=
 github.com/protomesh/protoc-gen-terraform v0.0.0-20230610125507-365cb2da5fec h1:6IFwpvlzOSEyiH7C6nDJHQRMmlGe4kzzzAivZO+PpJw=
 github.com/protomesh/protoc-gen-terraform v0.0.0-20230610125507-365cb2da5fec/go.mod h1:OYFkefdlGI0qv4LkqoBOBgo4QLDCR0tYoai3b3DVhoE=
 github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=

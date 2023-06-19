@@ -14,7 +14,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/lib/pq v1.10.9
-	github.com/protomesh/go-app v0.2.0
+	github.com/protomesh/go-app v0.2.1
 	github.com/protomesh/protoc-gen-terraform v0.0.0-20230610125507-365cb2da5fec
 	github.com/rubenv/sql-migrate v1.4.0
 	github.com/tidwall/gjson v1.14.4
