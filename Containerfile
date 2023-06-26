@@ -30,7 +30,7 @@ ARG APP_EXECUTABLE
 
 WORKDIR /var
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl
 
 COPY --from=builder /app/${APP_EXECUTABLE} /usr/bin/
 
