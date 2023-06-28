@@ -27,6 +27,7 @@ func fromHttpIngress(node *typesv1.HttpIngress) (*listenerv3.Listener, *routev3.
 
 	httpConn := &http_connection_managerv3.HttpConnectionManager{
 		HttpFilters: []*http_connection_managerv3.HttpFilter{},
+		StatPrefix:  node.IngressName,
 		RouteSpecifier: &http_connection_managerv3.HttpConnectionManager_Rds{
 			Rds: &http_connection_managerv3.Rds{
 				ConfigSource: &corev3.ConfigSource{
@@ -173,6 +174,10 @@ func fromHttpIngress(node *typesv1.HttpIngress) (*listenerv3.Listener, *routev3.
 
 		case *typesv1.HttpFilter_GrpcWeb_:
 
+			if !httpFilter.GrpcWeb.Enable {
+				break
+			}
+
 			gprcWebAny, _ := anypb.New(&grpcwebv3.GrpcWeb{})
 
 			httpConn.HttpFilters = append(httpConn.HttpFilters, &http_connection_managerv3.HttpFilter{
@@ -183,6 +188,10 @@ func fromHttpIngress(node *typesv1.HttpIngress) (*listenerv3.Listener, *routev3.
 			})
 
 		case *typesv1.HttpFilter_Cors_:
+
+			if !httpFilter.Cors.Enable {
+				break
+			}
 
 			corsAny, _ := anypb.New(&corsv3.Cors{})
 

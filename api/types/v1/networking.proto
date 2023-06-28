@@ -72,10 +72,18 @@ message HttpFilter {
   }
 
   // Cors enables the [http cors filter](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/cors/v3/cors.proto).
-  message Cors {}
+  message Cors {
+    // Enable the cors filter.
+    bool enable = 1
+        [ (protomesh.terraform.field_schema) = {required : true} ];
+  }
 
   // GrpcWeb enables the [grpc-web filter](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/grpc_web/v3/grpc_web.proto).
-  message GrpcWeb {}
+  message GrpcWeb {
+    // Enable the grpc-web filter.
+    bool enable = 1
+        [ (protomesh.terraform.field_schema) = {required : true} ];
+  }
 
   // JwtAuthn enables the [JWT authentication filter](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto).
   message JwtAuthn {
