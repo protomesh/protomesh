@@ -1,7 +1,6 @@
 package envoy
 
 import (
-	"errors"
 	"fmt"
 
 	clusterservice "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
@@ -180,6 +179,8 @@ func (xds *EnvoyXds[Dependency]) BeforeBatch(ctx context.Context) error {
 
 func (xds *EnvoyXds[Dependency]) OnUpdated(ctx context.Context, updatedRes *typesv1.Resource) error {
 
+	log := xds.Log()
+
 	spec, err := updatedRes.Spec.UnmarshalNew()
 	if err != nil {
 		return err
@@ -243,7 +244,7 @@ func (xds *EnvoyXds[Dependency]) OnUpdated(ctx context.Context, updatedRes *type
 		}
 
 	default:
-		return errors.New("Invalid specification type for Envoy xDS server")
+		log.Warn("Invalid specification type for Envoy xDS server", "type_url", updatedRes.Spec.TypeUrl)
 
 	}
 
