@@ -130,8 +130,8 @@ func fromHttpIngress(node *typesv1.HttpIngress) (*listenerv3.Listener, *routev3.
 					},
 					RequirementType: &jwtauthnv3.RequirementRule_Requires{
 						Requires: &jwtauthnv3.JwtRequirement{
-							RequiresType: &jwtauthnv3.JwtRequirement_RequiresAll{
-								RequiresAll: &jwtauthnv3.JwtRequirementAndList{
+							RequiresType: &jwtauthnv3.JwtRequirement_RequiresAny{
+								RequiresAny: &jwtauthnv3.JwtRequirementOrList{
 									Requirements: reqs,
 								},
 							},
