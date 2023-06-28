@@ -30,10 +30,10 @@ protocol = "tcp"
 
 [envoy.xds.service]
 
-resource.store.namespace = "envoy.xds"
+resource.store.namespace = "ingress"
 
 [envoy.xds.resource.store]
 
 client.certificate.path = ""
 client.enable.tls = true
-server.address = "store:6680"
+server.address = "prod-001-protomesh-resource-store.loc-001.pomwm.vpn:6680"

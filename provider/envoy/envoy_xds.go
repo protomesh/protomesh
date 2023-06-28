@@ -2,6 +2,7 @@ package envoy
 
 import (
 	"errors"
+	"fmt"
 
 	clusterservice "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
 	discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
@@ -33,9 +34,9 @@ type idNameMap struct {
 	idName map[string]string
 }
 
-func newIdNameMap(typeURL string) *idNameMap {
+func newIdNameMap(typeURL string, logger *cacheLogger) *idNameMap {
 	return &idNameMap{
-		cache:  cache.NewLinearCache(typeURL),
+		cache:  cache.NewLinearCache(typeURL, cache.WithLogger(logger)),
 		idName: make(map[string]string),
 	}
 }
@@ -60,6 +61,30 @@ func (i *idNameMap) Delete(key string) string {
 
 }
 
+type cacheLogger struct {
+	logger app.Logger
+}
+
+// Debugf logs a formatted debugging message.
+func (c *cacheLogger) Debugf(format string, args ...interface{}) {
+	c.logger.Debug(fmt.Sprintf(format, args...))
+}
+
+// Infof logs a formatted informational message.
+func (c *cacheLogger) Infof(format string, args ...interface{}) {
+	c.logger.Info(fmt.Sprintf(format, args...))
+}
+
+// Warnf logs a formatted warning message.
+func (c *cacheLogger) Warnf(format string, args ...interface{}) {
+	c.logger.Warn(fmt.Sprintf(format, args...))
+}
+
+// Errorf logs a formatted error message.
+func (c *cacheLogger) Errorf(format string, args ...interface{}) {
+	c.logger.Error(fmt.Sprintf(format, args...))
+}
+
 type EnvoyXds[Dependency EnvoyXdsDependency] struct {
 	*app.Injector[Dependency]
 
@@ -79,16 +104,17 @@ func (xds *EnvoyXds[Dependency]) Initialize() {
 	xds.instanceSetClusterNames = newEnvoyClusters()
 	xds.routing = newRouting()
 
+	caLogger := &cacheLogger{logger: xds.Log()}
+
 	xds.resourceMap = map[string]*idNameMap{
-		resource.ListenerType:    newIdNameMap(resource.ListenerType),
-		resource.ClusterType:     newIdNameMap(resource.ClusterType),
-		resource.EndpointType:    newIdNameMap(resource.EndpointType),
-		resource.VirtualHostType: newIdNameMap(resource.VirtualHostType),
-		resource.RouteType:       newIdNameMap(resource.RouteType),
+		resource.ListenerType:    newIdNameMap(resource.ListenerType, caLogger),
+		resource.ClusterType:     newIdNameMap(resource.ClusterType, caLogger),
+		resource.EndpointType:    newIdNameMap(resource.EndpointType, caLogger),
+		resource.VirtualHostType: newIdNameMap(resource.VirtualHostType, caLogger),
+		resource.RouteType:       newIdNameMap(resource.RouteType, caLogger),
 	}
 
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
+	ctx := context.TODO()
 
 	cache := &cache.MuxCache{
 		Classify: func(r *cache.Request) string {
@@ -105,6 +131,7 @@ func (xds *EnvoyXds[Dependency]) Initialize() {
 	}
 
 	grpcServer := xds.Dependency().GetGrpcServer()
+
 	xdsServer := server.NewServer(ctx, cache, nil)
 
 	discoverygrpc.RegisterAggregatedDiscoveryServiceServer(grpcServer, xdsServer)

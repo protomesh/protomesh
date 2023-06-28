@@ -3,11 +3,11 @@ services:
 
   envoy-xds:
     image: protomesh:local
-    build:
-      context: .
-      dockerfile: Containerfile
+    # build:
+    #   context: .
+    #   dockerfile: Containerfile
     restart: always
-    command: protomesh -config-file /var/protomesh/envoy_xds.toml
+    command: /usr/bin/protomesh -- -config-file /var/protomesh/envoy_xds.toml
     env_file:
       - .env
     volumes:
@@ -15,78 +15,79 @@ services:
     networks:
       - protomesh
     ports:
+      - 4000:4000
       - 7011:7011
-    depends_on:
-      - store
+    # depends_on:
+    #   - store
 
-  gateway:
-    image: protomesh:local
-    build:
-      context: .
-      dockerfile: Containerfile
-    restart: always
-    command: protomesh -config-file /var/protomesh/gateway.toml
-    env_file:
-      - .env
-    volumes:
-      # Mount /var/run so we can access docker.sock and talk to Docker
-      - /var/run:/var/run
-      # Mount the shared configuration directory, used by the AWS CLI and AWS SDKs
-      # On Windows, this directory can be found at "%UserProfile%\.aws"
-      - $HOME/.aws/:/home/.aws/
-      # Configuration file
-      - ${PWD}/cmd/gateway.toml:/var/protomesh/gateway.toml
-    environment:
-      # define the home folder; credentials will be read from $HOME/.aws
-      HOME: "/home"
-    networks:
-      - protomesh
-    ports:
-      - 5770:5770
-    depends_on:
-      - store
+  # gateway:
+  #   image: protomesh:local
+  #   build:
+  #     context: .
+  #     dockerfile: Containerfile
+  #   restart: always
+  #   command: protomesh -config-file /var/protomesh/gateway.toml
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     # Mount /var/run so we can access docker.sock and talk to Docker
+  #     - /var/run:/var/run
+  #     # Mount the shared configuration directory, used by the AWS CLI and AWS SDKs
+  #     # On Windows, this directory can be found at "%UserProfile%\.aws"
+  #     - $HOME/.aws/:/home/.aws/
+  #     # Configuration file
+  #     - ${PWD}/cmd/gateway.toml:/var/protomesh/gateway.toml
+  #   environment:
+  #     # define the home folder; credentials will be read from $HOME/.aws
+  #     HOME: "/home"
+  #   networks:
+  #     - protomesh
+  #   ports:
+  #     - 5770:5770
+  #   depends_on:
+  #     - store
 
-  store:
-    image: protomesh:local
-    build:
-      context: .
-      dockerfile: Containerfile
-    restart: always
-    command: protomesh -config-file /var/protomesh/store.toml
-    env_file:
-      - .env
-    volumes:
-      - ${PWD}/cmd/store.toml:/var/protomesh/store.toml
-    networks:
-      - protomesh
-    ports:
-      - 6680:6680
-    depends_on:
-      - postgresql
+  # store:
+  #   image: protomesh:local
+  #   build:
+  #     context: .
+  #     dockerfile: Containerfile
+  #   restart: always
+  #   command: protomesh -config-file /var/protomesh/store.toml
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ${PWD}/cmd/store.toml:/var/protomesh/store.toml
+  #   networks:
+  #     - protomesh
+  #   ports:
+  #     - 6680:6680
+  #   depends_on:
+  #     - postgresql
 
-  store-ui:
-    image: fullstorydev/grpcui
-    restart: always
-    entrypoint:
-      - /bin/grpcui
-    command:
-      # - -plaintext
-      - -use-reflection
-      - -vv
-      - -insecure
-      - -port
-      - '8080'
-      - -bind
-      - '0.0.0.0'
-      - -debug-client
-      - -open-browser=false
-      - store:6680
-    networks:
-      - protomesh
-    ports:
-      - '6690:8080'
-    depends_on:
-      - store
+  # store-ui:
+  #   image: fullstorydev/grpcui
+  #   restart: always
+  #   entrypoint:
+  #     - /bin/grpcui
+  #   command:
+  #     # - -plaintext
+  #     - -use-reflection
+  #     - -vv
+  #     - -insecure
+  #     - -port
+  #     - '8080'
+  #     - -bind
+  #     - '0.0.0.0'
+  #     - -debug-client
+  #     - -open-browser=false
+  #     - store:6680
+  #   networks:
+  #     - protomesh
+  #   ports:
+  #     - '6690:8080'
+  #   depends_on:
+  #     - store
 
   # worker:
   #   image: protomesh:local
@@ -149,31 +150,31 @@ services:
   #   volumes:
   #     - /var/lib/elasticsearch/data
 
-  postgresql:
-    environment:
-      POSTGRES_PASSWORD: protomesh
-      POSTGRES_USER: protomesh
-    image: postgres:${POSTGRESQL_VERSION}
-    networks:
-      - protomesh
-    ports:
-      - 5432:5432
-    volumes:
-      - /var/lib/postgresql/data
+  # postgresql:
+  #   environment:
+  #     POSTGRES_PASSWORD: protomesh
+  #     POSTGRES_USER: protomesh
+  #   image: postgres:${POSTGRESQL_VERSION}
+  #   networks:
+  #     - protomesh
+  #   ports:
+  #     - 5432:5432
+  #   volumes:
+  #     - /var/lib/postgresql/data
 
-  pgadmin:
-    image: dpage/pgadmin4
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@localhost.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    volumes:
-       - ${PWD}/provider/postgres/servers.json:/pgadmin4/servers.json
-    ports:
-      - "${PGADMIN_PORT:-5050}:80"
-    networks:
-      - protomesh
-    restart: unless-stopped
+  # pgadmin:
+  #   image: dpage/pgadmin4
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@localhost.com}
+  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+  #     PGADMIN_CONFIG_SERVER_MODE: 'False'
+  #   volumes:
+  #      - ${PWD}/provider/postgres/servers.json:/pgadmin4/servers.json
+  #   ports:
+  #     - "${PGADMIN_PORT:-5050}:80"
+  #   networks:
+  #     - protomesh
+  #   restart: unless-stopped
 
   # temporal:
   #   restart: always
