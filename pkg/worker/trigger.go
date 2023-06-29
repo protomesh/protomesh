@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/protomesh/protomesh/pkg/logging"
@@ -28,8 +29,8 @@ func (w *Worker[Dependency]) Trigger(ctx context.Context, trigger *typesv1.Trigg
 	// Build arguments slice
 	args := []interface{}{}
 
-	if argsList := trigger.Arguments.GetListValue(); argsList != nil {
-		args = argsList.AsSlice()
+	if err := json.Unmarshal([]byte(trigger.JsonArguments), &args); err != nil {
+		return err
 	}
 
 	run, err := tempClient.ExecuteWorkflow(ctx, *startOpts, trigger.Name, args...)
@@ -70,7 +71,7 @@ func (w *Worker[Dependency]) checkIfIsRunning(ctx context.Context, trigger *type
 					log.Info("Workflow execution request aborted because there's an already running execution")
 					return nil
 				}
-				startOpts.WorkflowIDReusePolicy = enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
+				startOpts.WorkflowIDReusePolicy = enums.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY
 
 			case typesv1.Trigger_IF_RUNNING_OVERLAP:
 				startOpts.WorkflowIDReusePolicy = enums.WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING

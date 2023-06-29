@@ -4,16 +4,16 @@ package protomesh.types.v1;
 
 option go_package = "github.com/protomesh/protomesh/proto/api/types/v1;typesv1";
 
-import "google/protobuf/struct.proto";
+// import "google/protobuf/struct.proto";
 import "google/protobuf/duration.proto";
 import "terraform/annotations.proto";
 
-option (protomesh.terraform.file_schema) = {
-  import_map : [ {
-    key : "google.protobuf.Value"
-    value : "github.com/protomesh/protoc-gen-terraform/pkg/protobuf;protomeshpb"
-  } ]
-};
+// option (protomesh.terraform.file_schema) = {
+//   import_map : [ {
+//     key : "google.protobuf.Value"
+//     value : "github.com/protomesh/protoc-gen-terraform/pkg/protobuf;protomeshpb"
+//   } ]
+// };
 
 // Process is a wrapper message to processes in the service mesh.
 message Process {
@@ -112,8 +112,8 @@ message Trigger {
   // minute.
   google.protobuf.Duration task_timeout = 10;
 
-  // A list of arguments to pass to workflow.
-  google.protobuf.Value arguments = 11;
+  // Arguments to pass to the workflow.
+  string json_arguments = 11;
 
   // RetryPolicy specify how to retry child workflow if error happens.
   message RetryPolicy {

@@ -94,12 +94,12 @@ func (w *Worker[Dependency]) OnUpdated(ctx context.Context, updatedRes *typesv1.
 		return err
 	}
 
-	trigger, ok := pb.(*typesv1.Trigger)
+	proc, ok := pb.(*typesv1.Process)
 	if !ok {
 		return nil
 	}
 
-	w.triggers[updatedRes.Id] = trigger
+	w.triggers[updatedRes.Id] = proc.GetTrigger()
 	return nil
 
 }
@@ -157,6 +157,10 @@ func (w *Worker[Dependency]) OnDropped(ctx context.Context, droppedRes *typesv1.
 }
 
 func (w *Worker[Dependency]) AfterBatch(ctx context.Context) error {
+	return nil
+}
+
+func (w *Worker[Dependency]) OnEndOfPage(ctx context.Context) {
 
 	for resourceId, trigger := range w.triggers {
 
@@ -168,8 +172,6 @@ func (w *Worker[Dependency]) AfterBatch(ctx context.Context) error {
 		}
 
 	}
-
-	return nil
 
 }
 

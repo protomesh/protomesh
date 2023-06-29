@@ -11,7 +11,7 @@ level = "debug"
 
 [temporal]
 
-address = "temporal:7233"
+address = "prod-001-temporal-server.loc-001.pomwm.vpn:7233"
 namespace = "default"
 
 [worker.service]
@@ -24,4 +24,4 @@ worker.task.queue = "protomesh"
 
 client.certificate.path = ""
 client.enable.tls = true
-server.address = "store:6680"
+server.address = "prod-001-protomesh-resource-store.loc-001.pomwm.vpn:6680"

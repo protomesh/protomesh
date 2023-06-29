@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/client"
 	workerpkg "github.com/protomesh/protomesh/pkg/worker"
@@ -29,10 +31,14 @@ type WorkerInjector interface {
 type WorkerInstance[D WorkerDeps] struct {
 	*app.Injector[D]
 
+	ctx    context.Context
+	cancel context.CancelFunc
+
 	ResourceStore       *client.GrpcClient[WorkerInjector] `config:"resource.store"`
 	resourceStoreClient servicesv1.ResourceStoreClient
 
-	Worker *workerpkg.Worker[WorkerInjector] `config:"service"`
+	Worker      *workerpkg.Worker[WorkerInjector] `config:"service"`
+	workerErrCh <-chan error
 }
 
 func NewWorkerInstance[D WorkerDeps]() *WorkerInstance[D] {
@@ -56,6 +62,8 @@ func (w *WorkerInstance[D]) GetTemporalWorker() worker.Worker {
 
 func (w *WorkerInstance[D]) Start() {
 
+	w.ctx, w.cancel = context.WithCancel(context.TODO())
+
 	w.ResourceStore.Start()
 
 	w.resourceStoreClient = servicesv1.NewResourceStoreClient(w.ResourceStore.ClientConn)
@@ -64,12 +72,18 @@ func (w *WorkerInstance[D]) Start() {
 
 	w.Worker.Start()
 
+	w.workerErrCh = w.Worker.Sync(w.ctx)
+
 }
 
-func (c *WorkerInstance[D]) Stop() {
+func (w *WorkerInstance[D]) Stop() {
 
-	c.Worker.Stop()
+	w.cancel()
 
-	c.ResourceStore.Stop()
+	<-w.workerErrCh
+
+	w.Worker.Stop()
+
+	w.ResourceStore.Stop()
 
 }

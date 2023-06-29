@@ -154,6 +154,10 @@ func (g *Gateway[D]) AfterBatch(ctx context.Context) error {
 
 }
 
+func (g *Gateway[D]) OnEndOfPage(ctx context.Context) {
+
+}
+
 func (g *Gateway[D]) Sync(ctx context.Context) <-chan error {
 
 	sync := &resource.ResourceStoreSynchronizer[D]{

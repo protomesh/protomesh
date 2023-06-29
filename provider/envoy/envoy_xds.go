@@ -321,6 +321,10 @@ func (xds *EnvoyXds[Dependency]) AfterBatch(ctx context.Context) error {
 
 }
 
+func (xds *EnvoyXds[Dependency]) OnEndOfPage(ctx context.Context) {
+
+}
+
 func (xds *EnvoyXds[Dependency]) Sync(ctx context.Context) <-chan error {
 
 	sync := &resourcepkg.ResourceStoreSynchronizer[Dependency]{

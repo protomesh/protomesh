@@ -30,6 +30,7 @@ type ResourceStoreSynchronizer[D ResourceStoreSynchronizerDependency] struct {
 		OnUpdated(context.Context, *typesv1.Resource) error
 		OnDropped(context.Context, *typesv1.Resource) error
 		AfterBatch(context.Context) error
+		OnEndOfPage(context.Context)
 	}
 }
 
@@ -103,6 +104,7 @@ func (rss *ResourceStoreSynchronizer[D]) Sync(ctx context.Context) <-chan error 
 				case listRes := <-listResCh:
 
 					if listRes.EndOfList {
+						rss.EventHandler.OnEndOfPage(ctx)
 						continue inner
 					}
 
