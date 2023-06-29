@@ -2,6 +2,7 @@ package envoy
 
 import (
 	"strings"
+	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -20,6 +21,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -225,7 +227,8 @@ func fromHttpIngress(node *typesv1.HttpIngress) (*listenerv3.Listener, *routev3.
 		IgnorePortInHostMatching: true,
 		Vhds: &routev3.Vhds{
 			ConfigSource: &corev3.ConfigSource{
-				ResourceApiVersion: resource.DefaultAPIVersion,
+				InitialFetchTimeout: durationpb.New(0 * time.Second),
+				ResourceApiVersion:  resource.DefaultAPIVersion,
 				ConfigSourceSpecifier: &corev3.ConfigSource_ApiConfigSource{
 					ApiConfigSource: &corev3.ApiConfigSource{
 						ApiType:                   corev3.ApiConfigSource_DELTA_GRPC,
