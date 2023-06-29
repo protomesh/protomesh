@@ -1,0 +1,88 @@
+admin:
+  address:
+    socket_address: { address: 0.0.0.0, port_value: 7071 }
+
+node:
+  cluster: xds-cluster
+  id: protomesh-node
+
+dynamic_resources:
+  lds_config:
+    resource_api_version: V3
+    api_config_source:
+      api_type: DELTA_GRPC
+      transport_api_version: V3
+      grpc_services:
+        - envoy_grpc:
+            cluster_name: xds-cluster
+  cds_config:
+    resource_api_version: V3
+    api_config_source:
+      api_type: DELTA_GRPC
+      transport_api_version: V3
+      grpc_services:
+        - envoy_grpc:
+            cluster_name: xds-cluster
+
+static_resources:
+
+  clusters:
+
+    - type: STRICT_DNS
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicit_http_config:
+            http2_protocol_options: {}
+      name: xds-cluster
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      load_assignment:
+        cluster_name: xds-cluster
+        endpoints:
+        - lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: envoy-xds
+                  port_value: 7011
+
+    - type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      connect_timeout: 20s
+      lb_policy: ROUND_ROBIN
+      name: googleapis
+      load_assignment:
+        cluster_name: googleapis
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: www.googleapis.com
+                      port_value: 443
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+
+    - type: LOGICAL_DNS
+      dns_lookup_family: V4_ONLY
+      connect_timeout: 20s
+      lb_policy: ROUND_ROBIN
+      name: cognitoidp
+      load_assignment:
+        cluster_name: cognitoidp
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: cognito-idp.sa-east-1.amazonaws.com
+                      port_value: 443
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext

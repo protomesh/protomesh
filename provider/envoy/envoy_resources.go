@@ -33,10 +33,11 @@ func fromHttpIngress(node *typesv1.HttpIngress) (*listenerv3.Listener, *routev3.
 		RouteSpecifier: &http_connection_managerv3.HttpConnectionManager_Rds{
 			Rds: &http_connection_managerv3.Rds{
 				ConfigSource: &corev3.ConfigSource{
-					ResourceApiVersion: resourcev3.DefaultAPIVersion,
+					InitialFetchTimeout: durationpb.New(0 * time.Second),
+					ResourceApiVersion:  resourcev3.DefaultAPIVersion,
 					ConfigSourceSpecifier: &corev3.ConfigSource_ApiConfigSource{
 						ApiConfigSource: &corev3.ApiConfigSource{
-							ApiType:                   corev3.ApiConfigSource_DELTA_GRPC,
+							ApiType:                   corev3.ApiConfigSource_GRPC,
 							TransportApiVersion:       resourcev3.DefaultAPIVersion,
 							SetNodeOnFirstMessageOnly: false,
 							GrpcServices: []*corev3.GrpcService{{
@@ -289,7 +290,7 @@ func fromService(node *typesv1.Service) (*clusterv3.Cluster, error) {
 				ResourceApiVersion: resourcev3.DefaultAPIVersion,
 				ConfigSourceSpecifier: &corev3.ConfigSource_ApiConfigSource{
 					ApiConfigSource: &corev3.ApiConfigSource{
-						ApiType:                   corev3.ApiConfigSource_DELTA_GRPC,
+						ApiType:                   corev3.ApiConfigSource_GRPC,
 						TransportApiVersion:       resourcev3.DefaultAPIVersion,
 						SetNodeOnFirstMessageOnly: false,
 						GrpcServices: []*corev3.GrpcService{{
