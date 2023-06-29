@@ -17,7 +17,3 @@ func (w *Worker[Dependency]) Drop(ctx context.Context, in *servicesv1.DropResour
 func (w *Worker[Dependency]) Get(ctx context.Context, in *servicesv1.GetResourceRequest) (*servicesv1.GetResourceResponse, error) {
 	return w.Dependency().GetResourceStoreClient().Get(ctx, in)
 }
-
-func (w *Worker[Dependency]) Watch(ctx context.Context, in *servicesv1.WatchResourcesRequest) (servicesv1.ResourceStore_WatchClient, error) {
-	return w.Dependency().GetResourceStoreClient().Watch(ctx, in)
-}

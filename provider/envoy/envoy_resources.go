@@ -281,6 +281,7 @@ func fromService(node *typesv1.Service) (*clusterv3.Cluster, error) {
 			Type: clusterv3.Cluster_EDS,
 		},
 		EdsClusterConfig: &clusterv3.Cluster_EdsClusterConfig{
+			ServiceName: node.ServiceName,
 			EdsConfig: &corev3.ConfigSource{
 				ResourceApiVersion: resourcev3.DefaultAPIVersion,
 				ConfigSourceSpecifier: &corev3.ConfigSource_ApiConfigSource{
