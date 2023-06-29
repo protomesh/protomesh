@@ -56,17 +56,15 @@ func (w *Worker[Depedency]) Start() {
 
 	log := w.Log()
 
-	resCli := w.Dependency().GetResourceStoreClient()
-
-	w.Worker.RegisterActivityWithOptions(resCli.Drop, activity.RegisterOptions{
+	w.Worker.RegisterActivityWithOptions(w.Drop, activity.RegisterOptions{
 		Name: "ResourceStore_Drop",
 	})
 
-	w.Worker.RegisterActivityWithOptions(resCli.Get, activity.RegisterOptions{
+	w.Worker.RegisterActivityWithOptions(w.Get, activity.RegisterOptions{
 		Name: "ResourceStore_Get",
 	})
 
-	w.Worker.RegisterActivityWithOptions(resCli.Put, activity.RegisterOptions{
+	w.Worker.RegisterActivityWithOptions(w.Put, activity.RegisterOptions{
 		Name: "ResourceStore_Put",
 	})
 
