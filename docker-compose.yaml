@@ -1,22 +1,22 @@
 version: "3.5"
 services:
 
-  # envoy-xds:
-  #   image: protomesh:local
-  #   # build:
-  #   #   context: .
-  #   #   dockerfile: Containerfile
-  #   restart: always
-  #   command: /usr/bin/protomesh -- -config-file /var/protomesh/envoy_xds.toml
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - ${PWD}/cmd/envoy_xds.toml:/var/protomesh/envoy_xds.toml
-  #   networks:
-  #     - protomesh
-  #   ports:
-  #     - 4000:4000
-  #     - 7011:7011
+  envoy-xds:
+    image: protomesh:local
+    # build:
+    #   context: .
+    #   dockerfile: Containerfile
+    restart: always
+    command: /usr/bin/protomesh -- -config-file /var/protomesh/envoy_xds.toml
+    env_file:
+      - .env
+    volumes:
+      - ${PWD}/cmd/envoy_xds.toml:/var/protomesh/envoy_xds.toml
+    networks:
+      - protomesh
+    ports:
+      - 4000:4000
+      - 7011:7011
     # depends_on:
     #   - store
 
@@ -89,21 +89,21 @@ services:
   #   depends_on:
   #     - store
 
-  worker:
-    image: protomesh:local
-    build:
-      context: .
-      dockerfile: Containerfile
-    restart: always
-    command: /usr/bin/protomesh -- -config-file /var/protomesh/worker.toml
-    env_file:
-      - .env
-    volumes:
-      - ${PWD}/cmd/worker.toml:/var/protomesh/worker.toml
-    ports:
-      - 4000:4000
-    networks:
-      - protomesh
+  # worker:
+  #   image: protomesh:local
+  #   build:
+  #     context: .
+  #     dockerfile: Containerfile
+  #   restart: always
+  #   command: /usr/bin/protomesh -- -config-file /var/protomesh/worker.toml
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ${PWD}/cmd/worker.toml:/var/protomesh/worker.toml
+  #   ports:
+  #     - 4000:4000
+  #   networks:
+  #     - protomesh
     # depends_on:
       # - store
       # - temporal

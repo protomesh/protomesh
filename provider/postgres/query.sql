@@ -144,6 +144,7 @@ FROM
     resource_events AS re
 WHERE
     (re.namespace, re.version_index, re.id) > (@namespace::TEXT, @from_version_index::BIGINT, @from_id::UUID)
+    AND rc.namespace = @namespace::TEXT
 ORDER BY
     re.namespace ASC,
     re.version_index ASC,

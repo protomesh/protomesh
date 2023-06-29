@@ -296,6 +296,7 @@ FROM
     resource_events AS re
 WHERE
     (re.namespace, re.version_index, re.id) > ($1::TEXT, $2::BIGINT, $3::UUID)
+    AND rc.namespace = $1::TEXT
 ORDER BY
     re.namespace ASC,
     re.version_index ASC,
