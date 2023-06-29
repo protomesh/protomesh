@@ -215,9 +215,8 @@ func (xds *EnvoyXds[Dependency]) OnUpdated(ctx context.Context, updatedRes *type
 
 				op := xds.tx.operations[resource.EndpointType]
 
-				id := createClusterLoadId(clusterName, updatedRes.Id)
-
-				op.toUpdate[id] = xds.tx.endpoints.ToLoadAssignment(clusterName)
+				xds.instanceSetClusterNames.Add(clusterName, updatedRes.Id)
+				op.toUpdate[clusterName] = xds.tx.endpoints.ToLoadAssignment(clusterName)
 
 			}
 
@@ -268,9 +267,7 @@ func (xds *EnvoyXds[Dependency]) OnDropped(ctx context.Context, droppedRes *type
 
 			for clusterName := range resMap {
 
-				id := createClusterLoadId(clusterName, droppedRes.Id)
-
-				op.toDelete = append(op.toDelete, id)
+				op.toDelete = append(op.toDelete, clusterName)
 
 			}
 
