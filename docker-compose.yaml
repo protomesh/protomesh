@@ -1,69 +1,70 @@
 version: "3.5"
 services:
 
-  envoy-xds:
+  # envoy-xds:
+  #   image: protomesh:local
+  #   # build:
+  #   #   context: .
+  #   #   dockerfile: Containerfile
+  #   restart: always
+  #   command: /usr/bin/protomesh -- -config-file /var/protomesh/envoy_xds.toml
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ${PWD}/cmd/envoy_xds.toml:/var/protomesh/envoy_xds.toml
+  #   networks:
+  #     - protomesh
+  #   ports:
+  #     - 4000:4000
+  #     - 7011:7011
+  #   # depends_on:
+  #   #   - store
+
+
+  # envoy:
+  #   image: envoyproxy/envoy:dev-43a247f6f2602d0809a5f03cb2326c2244ce05fd
+  #   # build:
+  #   #   context: .
+  #   #   dockerfile: Containerfile
+  #   restart: always
+  #   command: envoy -l debug -c /var/envoy.yaml
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ${PWD}/cmd/envoy.yaml:/var/envoy.yaml
+  #   networks:
+  #     - protomesh
+  #   ports:
+  #     - 4443:443
+  #     - 7071:7071
+  #   depends_on:
+  #     - envoy-xds
+
+  gateway:
     image: protomesh:local
-    # build:
-    #   context: .
-    #   dockerfile: Containerfile
+    build:
+      context: .
+      dockerfile: Containerfile
     restart: always
-    command: /usr/bin/protomesh -- -config-file /var/protomesh/envoy_xds.toml
+    command: /usr/bin/protomesh -- -config-file /var/protomesh/gateway.toml
     env_file:
       - .env
     volumes:
-      - ${PWD}/cmd/envoy_xds.toml:/var/protomesh/envoy_xds.toml
+      # Mount /var/run so we can access docker.sock and talk to Docker
+      - /var/run:/var/run
+      # Mount the shared configuration directory, used by the AWS CLI and AWS SDKs
+      # On Windows, this directory can be found at "%UserProfile%\.aws"
+      - $HOME/.aws/:/home/.aws/
+      # Configuration file
+      - ${PWD}/cmd/gateway.toml:/var/protomesh/gateway.toml
+    environment:
+      # define the home folder; credentials will be read from $HOME/.aws
+      HOME: "/home"
     networks:
       - protomesh
     ports:
       - 4000:4000
-      - 7011:7011
-    # depends_on:
-    #   - store
-
-
-  envoy:
-    image: envoyproxy/envoy:dev-43a247f6f2602d0809a5f03cb2326c2244ce05fd
-    # build:
-    #   context: .
-    #   dockerfile: Containerfile
-    restart: always
-    command: envoy -l debug -c /var/envoy.yaml
-    env_file:
-      - .env
-    volumes:
-      - ${PWD}/cmd/envoy.yaml:/var/envoy.yaml
-    networks:
-      - protomesh
-    ports:
-      - 4443:443
-      - 7071:7071
-    depends_on:
-      - envoy-xds
-
-  # gateway:
-  #   image: protomesh:local
-  #   build:
-  #     context: .
-  #     dockerfile: Containerfile
-  #   restart: always
-  #   command: protomesh -config-file /var/protomesh/gateway.toml
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     # Mount /var/run so we can access docker.sock and talk to Docker
-  #     - /var/run:/var/run
-  #     # Mount the shared configuration directory, used by the AWS CLI and AWS SDKs
-  #     # On Windows, this directory can be found at "%UserProfile%\.aws"
-  #     - $HOME/.aws/:/home/.aws/
-  #     # Configuration file
-  #     - ${PWD}/cmd/gateway.toml:/var/protomesh/gateway.toml
-  #   environment:
-  #     # define the home folder; credentials will be read from $HOME/.aws
-  #     HOME: "/home"
-  #   networks:
-  #     - protomesh
-  #   ports:
-  #     - 5770:5770
+      - 5770:5770
   #   depends_on:
   #     - store
 

@@ -35,7 +35,7 @@ func (m *policyMatcher) insert(policy *typesv1.GatewayPolicy, source any) {
 		nested := m.tree.Match(source.Path)
 
 		if nested == nil {
-			nested := newPolicyMatcher(true)
+			nested = newPolicyMatcher(true)
 			m.tree.Insert(source.Path, nested)
 		}
 
