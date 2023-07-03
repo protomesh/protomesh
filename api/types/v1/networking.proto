@@ -291,6 +291,8 @@ message RoutingPolicy {
     string target_service = 2;
     // Timeout to connect to service in this route.
     google.protobuf.Duration timeout = 3;
+    // Prefix rewrite to apply to the path before forwarding the request to the service.
+    string prefix_rewrite = 4;
   }
 
   // Routes in this routing policy.

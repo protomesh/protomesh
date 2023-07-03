@@ -43,6 +43,7 @@ func toEnvoyRoute(route *typesv1.RoutingPolicy_Route) *routev3.Route {
 				ClusterSpecifier: &routev3.RouteAction_Cluster{
 					Cluster: route.TargetService,
 				},
+				PrefixRewrite: route.PrefixRewrite,
 			},
 		},
 	}
