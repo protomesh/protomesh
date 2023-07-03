@@ -14,6 +14,7 @@ import (
 	jwtauthnv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/jwt_authn/v3"
 	routerv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	http_connection_managerv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -308,6 +309,22 @@ func fromService(node *typesv1.Service) (*clusterv3.Cluster, error) {
 		DnsLookupFamily:               clusterv3.Cluster_AUTO,
 		ConnectTimeout:                node.ConnectTimeout,
 		TypedExtensionProtocolOptions: map[string]*anypb.Any{},
+	}
+
+	if node.EnableTlsTransport {
+
+		tlsTransport, err := anypb.New(&tlsv3.UpstreamTlsContext{})
+		if err != nil {
+			return nil, err
+		}
+
+		cluster.TransportSocket = &corev3.TransportSocket{
+			Name: "envoy.transport_sockets.tls",
+			ConfigType: &corev3.TransportSocket_TypedConfig{
+				TypedConfig: tlsTransport,
+			},
+		}
+
 	}
 
 	switch protoOpts := node.InstanceApplicationProtocolOptions.(type) {

@@ -80,7 +80,7 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: cognito-idp.sa-east-1.amazonaws.com
+                      address: cognito-idp.us-east-1.amazonaws.com
                       port_value: 443
       transport_socket:
         name: envoy.transport_sockets.tls

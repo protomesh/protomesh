@@ -1,47 +1,47 @@
 version: "3.5"
 services:
 
-  # envoy-xds:
-  #   image: protomesh:local
-  #   # build:
-  #   #   context: .
-  #   #   dockerfile: Containerfile
-  #   restart: always
-  #   command: /usr/bin/protomesh -- -config-file /var/protomesh/envoy_xds.toml
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - ${PWD}/cmd/envoy_xds.toml:/var/protomesh/envoy_xds.toml
-  #   networks:
-  #     - protomesh
-  #   ports:
-  #     - 4000:4000
-  #     - 7011:7011
-  #   # depends_on:
-  #   #   - store
+  envoy-xds:
+    image: protomesh:local
+    # build:
+    #   context: .
+    #   dockerfile: Containerfile
+    restart: always
+    command: /usr/bin/protomesh -config-file /var/protomesh/envoy_xds.toml
+    env_file:
+      - .env
+    volumes:
+      - ${PWD}/cmd/envoy_xds.toml:/var/protomesh/envoy_xds.toml
+    networks:
+      - protomesh
+    ports:
+      # - 4000:4000
+      - 7011:7011
+    # depends_on:
+    #   - store
 
 
-  # envoy:
-  #   image: envoyproxy/envoy:dev-43a247f6f2602d0809a5f03cb2326c2244ce05fd
-  #   # build:
-  #   #   context: .
-  #   #   dockerfile: Containerfile
-  #   restart: always
-  #   command: envoy -l debug -c /var/envoy.yaml
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - ${PWD}/cmd/envoy.yaml:/var/envoy.yaml
-  #   networks:
-  #     - protomesh
-  #   ports:
-  #     - 4443:443
-  #     - 7071:7071
-  #   depends_on:
-  #     - envoy-xds
+  envoy:
+    image: envoyproxy/envoy:dev-43a247f6f2602d0809a5f03cb2326c2244ce05fd
+    # build:
+    #   context: .
+    #   dockerfile: Containerfile
+    restart: always
+    command: envoy -l trace -c /var/envoy.yaml
+    env_file:
+      - .env
+    volumes:
+      - ${PWD}/cmd/envoy.yaml:/var/envoy.yaml
+    networks:
+      - protomesh
+    ports:
+      - 4443:443
+      - 7071:7071
+    depends_on:
+      - envoy-xds
 
   gateway:
-    image: protomesh:local
+    image: protomesh:debug
     build:
       context: .
       dockerfile: Containerfile

@@ -271,6 +271,9 @@ message Service {
     // Http2Options options.
     Http2Options instance_http2_options = 5;
   }
+
+  // Enable TLS transport to connect to upstream.
+  bool enable_tls_transport = 6;
 }
 
 // Represents a routing policy for the control plane (Envoy Virtual Host).
