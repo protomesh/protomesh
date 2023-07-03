@@ -22,8 +22,8 @@ import (
 type lambdaGrpcHandler struct {
 	log app.Logger
 
-	fullMethodName string
-	param          *typesv1.AwsHandler_LambdaFunction
+	fullPath string
+	param    *typesv1.AwsHandler_LambdaFunction
 
 	lambdaCli *lambda.Client
 
@@ -43,7 +43,7 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 	}()
 
 	req := &events.APIGatewayProxyRequest{
-		Path:              l.fullMethodName,
+		Path:              l.fullPath,
 		MultiValueHeaders: l.incomingMetadata,
 		Body:              string(payload[:]),
 		IsBase64Encoded:   false,

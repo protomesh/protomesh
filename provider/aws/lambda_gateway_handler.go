@@ -44,11 +44,13 @@ func (l *LambdaGatewayHandler[D]) HandleGrpc(ctx context.Context, param proto.Me
 
 	incomingMetadata, _ := metadata.FromIncomingContext(ctx)
 
-	fullMethodName, _ := grpc.MethodFromServerStream(call.Stream)
+	serverStream := grpc.ServerTransportStreamFromContext(call.Stream.Context())
+
+	fullPath := serverStream.Method()
 
 	handler := &lambdaGrpcHandler{
-		log:              l.Log().With("source", "gRPC", "fullMethodName", fullMethodName),
-		fullMethodName:   fullMethodName,
+		log:              l.Log().With("source", "gRPC", "fullPath", fullPath),
+		fullPath:         fullPath,
 		param:            param.(*typesv1.AwsHandler_LambdaFunction),
 		lambdaCli:        l.lambdaCli,
 		ctx:              ctx,
