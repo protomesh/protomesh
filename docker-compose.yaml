@@ -60,6 +60,8 @@ services:
     environment:
       # define the home folder; credentials will be read from $HOME/.aws
       HOME: "/home"
+      AWS_REGION: us-east-1
+      AWS_PROFILE: pomwm-prod
     networks:
       - protomesh
     ports:

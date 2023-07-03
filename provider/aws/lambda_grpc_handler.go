@@ -60,7 +60,7 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 		Qualifier:      aws.String(l.param.Qualifier),
 		Payload:        in,
 	})
-	if out.FunctionError != nil {
+	if out != nil && out.FunctionError != nil {
 		return fmt.Errorf("Lambda function returned error: %s", aws.ToString(out.FunctionError))
 	}
 	if err != nil {
