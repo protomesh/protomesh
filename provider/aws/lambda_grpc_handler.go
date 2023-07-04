@@ -45,8 +45,8 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 	req := &events.APIGatewayProxyRequest{
 		Path:              l.fullPath,
 		MultiValueHeaders: l.incomingMetadata,
-		Body:              string(payload[:]),
-		IsBase64Encoded:   false,
+		Body:              base64.RawStdEncoding.EncodeToString(payload[:]),
+		IsBase64Encoded:   true,
 	}
 
 	in, err := json.Marshal(req)
