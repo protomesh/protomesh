@@ -108,6 +108,9 @@ func (m *policyMatcher) match(keys ...string) *typesv1.GatewayPolicy {
 	}
 
 	if nested == nil {
+		if _, ok := typesv1.HttpMethod_value[key]; ok {
+			return m.policy
+		}
 		return nil
 	}
 
