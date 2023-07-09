@@ -26,7 +26,7 @@ type LambdaGatewayHandler[D LambdaGatewayHandlerDependency] struct {
 
 	GrpcServerStreamTimeoutHeader app.Config `config:"grpc.server.stream.timeout.header,str" default:"x-server-stream-timeout" usage:"Timeout for waiting for gRPC stream to finish"`
 
-	NounceHeader app.Config `config:"nounce.header,str" default:"x-nounce-id" usage:"Header to use for nounce"`
+	NounceHeader app.Config `config:"nounce.header,str" default:"x-nounce" usage:"Header to use for nounce"`
 	nounceHeader string
 
 	lambdaCli *lambda.Client
