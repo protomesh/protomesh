@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	_ gateway.GatewayHandler = &LambdaGatewayHandler[LambdaGatewayHandlerDependency]{}
+	_      gateway.GatewayHandler = &LambdaGatewayHandler[LambdaGatewayHandlerDependency]{}
+	nounce                        = 8
 )
 
 type LambdaGatewayHandlerDependency interface {
@@ -23,11 +24,17 @@ type LambdaGatewayHandlerDependency interface {
 type LambdaGatewayHandler[D LambdaGatewayHandlerDependency] struct {
 	*app.Injector[D]
 
+	GrpcServerStreamTimeoutHeader app.Config `config:"grpc.server.stream.timeout.header,str" default:"x-server-stream-timeout" usage:"Timeout for waiting for gRPC stream to finish"`
+
+	NounceHeader app.Config `config:"nounce.header,str" default:"x-nounce-id" usage:"Header to use for nounce"`
+	nounceHeader string
+
 	lambdaCli *lambda.Client
 }
 
 func (l *LambdaGatewayHandler[D]) Initialize() {
 	l.lambdaCli = l.Dependency().GetLambdaClient()
+	l.nounceHeader = l.NounceHeader.StringVal()
 }
 
 func (l *LambdaGatewayHandler[D]) GetHandlerType() gateway.HandlerType {
@@ -44,18 +51,23 @@ func (l *LambdaGatewayHandler[D]) HandleGrpc(ctx context.Context, param proto.Me
 
 	incomingMetadata, _ := metadata.FromIncomingContext(ctx)
 
+	nonce := RandStringBytesMaskImprSrcSB(nounce)
+
+	incomingMetadata.Set(l.nounceHeader, nonce)
+
 	serverStream := grpc.ServerTransportStreamFromContext(call.Stream.Context())
 
 	fullPath := serverStream.Method()
 
 	handler := &lambdaGrpcHandler{
-		log:              l.Log().With("source", "gRPC", "fullPath", fullPath),
-		fullPath:         fullPath,
-		param:            param.(*typesv1.AwsHandler_LambdaFunction),
-		lambdaCli:        l.lambdaCli,
-		ctx:              ctx,
-		incomingMetadata: incomingMetadata,
-		waitCall:         make(chan interface{}),
+		log:                       l.Log().With("source", "gRPC", "fullPath", fullPath),
+		fullPath:                  fullPath,
+		param:                     param.(*typesv1.AwsHandler_LambdaFunction),
+		lambdaCli:                 l.lambdaCli,
+		ctx:                       ctx,
+		incomingMetadata:          incomingMetadata,
+		serverStreamTimeoutHeader: l.GrpcServerStreamTimeoutHeader.StringVal(),
+		waitCall:                  make(chan interface{}),
 	}
 
 	return handler
@@ -63,6 +75,10 @@ func (l *LambdaGatewayHandler[D]) HandleGrpc(ctx context.Context, param proto.Me
 }
 
 func (l *LambdaGatewayHandler[D]) HandleHttp(ctx context.Context, param proto.Message, call *gateway.HttpCall) gateway.HttpHandler {
+
+	nonce := RandStringBytesMaskImprSrcSB(nounce)
+
+	call.Request.Header.Set(l.nounceHeader, nonce)
 
 	handler := &lambdaHttpHandler{
 		log:       l.Log().With("source", "HTTP", "path", call.Request.URL.Path),

@@ -29,8 +29,10 @@ import (
 func fromHttpIngress(node *typesv1.HttpIngress) (*listenerv3.Listener, *routev3.RouteConfiguration, error) {
 
 	httpConn := &http_connection_managerv3.HttpConnectionManager{
-		HttpFilters: []*http_connection_managerv3.HttpFilter{},
-		StatPrefix:  node.IngressName,
+		HttpFilters:       []*http_connection_managerv3.HttpFilter{},
+		StatPrefix:        node.IngressName,
+		CodecType:         http_connection_managerv3.HttpConnectionManager_AUTO,
+		StreamIdleTimeout: durationpb.New(0),
 		RouteSpecifier: &http_connection_managerv3.HttpConnectionManager_Rds{
 			Rds: &http_connection_managerv3.Rds{
 				ConfigSource: &corev3.ConfigSource{

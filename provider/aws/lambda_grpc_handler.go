@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -30,8 +31,17 @@ type lambdaGrpcHandler struct {
 	ctx              context.Context
 	incomingMetadata metadata.MD
 
-	result           []byte
-	waitCall         chan interface{}
+	result       []byte
+	resultCount  int
+	isLastResult bool
+
+	clientRequestPayload      []byte
+	serverStreamTimeout       *time.Timer
+	serverStreamTimeoutHeader string
+	serverStreamError         error
+
+	waitCall chan interface{}
+
 	outgoingMetadata metadata.MD
 }
 
@@ -39,8 +49,14 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 
 	defer func() {
 		l.waitCall <- nil
-		close(l.waitCall)
+		if l.isLastResult {
+			close(l.waitCall)
+		}
 	}()
+
+	if l.serverStreamTimeout != nil {
+		<-l.serverStreamTimeout.C
+	}
 
 	req := &events.APIGatewayProxyRequest{
 		Path:              l.fullPath,
@@ -74,7 +90,52 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 
 	l.outgoingMetadata = metadata.Join(metadata.New(res.Headers), res.MultiValueHeaders)
 
+	if res.IsBase64Encoded {
+
+		result, err := base64.RawStdEncoding.DecodeString(res.Body)
+		if err != nil {
+			return err
+		}
+
+		l.result = result
+
+	} else {
+		l.result = []byte(res.Body)
+	}
+
+	l.isLastResult = true
+
 	switch res.StatusCode {
+
+	// This status code is used for gRPC server-side streaming.
+	case http.StatusProcessing:
+
+		serverStreamTimeout, ok := l.outgoingMetadata[l.serverStreamTimeoutHeader]
+
+		l.clientRequestPayload = payload
+		l.isLastResult = false
+
+		if ok && len(serverStreamTimeout) == 1 {
+
+			d, err := time.ParseDuration(serverStreamTimeout[0])
+			if err != nil {
+				return status.Errorf(codes.Internal, "invalid %s header: %s", l.serverStreamTimeoutHeader, serverStreamTimeout)
+			}
+
+			if l.serverStreamTimeout == nil {
+				l.serverStreamTimeout = time.NewTimer(d)
+			} else {
+				l.serverStreamTimeout.Reset(d)
+			}
+
+		}
+
+		// Only the first call in the case of using a server-side stream
+		// needs to return io.EOF, to end the client-side stream.
+		// Subsequent calls will return nil, to continue the server-side stream.
+		if l.resultCount > 0 {
+			return nil
+		}
 
 	case http.StatusGone:
 		return status.Error(codes.Aborted, res.Body)
@@ -120,28 +181,26 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 
 	}
 
-	if res.IsBase64Encoded {
-
-		result, err := base64.RawStdEncoding.DecodeString(res.Body)
-		if err != nil {
-			return err
-		}
-
-		l.result = result
-
-		return io.EOF
-
-	}
-
-	l.result = []byte(res.Body)
-
 	return io.EOF
 
 }
 
 func (l *lambdaGrpcHandler) Result() ([]byte, error) {
 	<-l.waitCall
-	return l.result, io.EOF
+
+	l.resultCount++
+
+	if l.isLastResult {
+		return l.result, io.EOF
+	}
+
+	if l.serverStreamTimeout != nil {
+		go func() {
+			l.serverStreamError = l.Call(l.clientRequestPayload)
+		}()
+	}
+
+	return l.result, l.serverStreamError
 }
 
 func (l *lambdaGrpcHandler) GetOutgoingMetadata() metadata.MD {

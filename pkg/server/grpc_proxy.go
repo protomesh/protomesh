@@ -91,10 +91,14 @@ func SendFrom(serverStream grpc.ServerStream, handler gateway.GrpcHandler) <-cha
 					}
 				}
 
-				f.payload = payload
+				if payload != nil && len(payload) > 0 {
 
-				if err := serverStream.SendMsg(f); err != nil {
-					return status.Errorf(codes.Internal, "Error sending result to server stream: %s", err.Error())
+					f.payload = payload
+
+					if err := serverStream.SendMsg(f); err != nil {
+						return status.Errorf(codes.Internal, "Error sending result to server stream: %s", err.Error())
+					}
+
 				}
 
 				if resErr == io.EOF {
