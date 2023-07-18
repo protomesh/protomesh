@@ -28,6 +28,7 @@ func (t *TemporalBuilder[Dependency]) GetTemporalClient() client.Client {
 		converter.NewNilPayloadConverter(),
 		converter.NewByteSlicePayloadConverter(),
 		NewProtoJSONPayloadConverter(),
+		converter.NewJSONPayloadConverter(),
 	)
 
 	// if t.AesCodecKey.IsSet() {
