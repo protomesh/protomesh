@@ -4,14 +4,18 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/iancoleman/strcase"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 func hashRoute(route *typesv1.RoutingPolicy_Route, suffixes ...string) string {
@@ -44,6 +48,9 @@ func toEnvoyRoute(route *typesv1.RoutingPolicy_Route) *routev3.Route {
 					Cluster: route.TargetService,
 				},
 				PrefixRewrite: route.PrefixRewrite,
+				MaxStreamDuration: &routev3.RouteAction_MaxStreamDuration{
+					GrpcTimeoutHeaderMax: durationpb.New(0),
+				},
 			},
 		},
 	}
@@ -124,6 +131,74 @@ func (r *routing) putPolicy(resourceId string, policy *typesv1.RoutingPolicy) {
 	r.resources[resourceId] = policy
 }
 
+func makeCors(policy *typesv1.RoutingPolicy) *routev3.CorsPolicy {
+
+	hasCors := false
+
+	if policy.Cors == nil {
+		return nil
+	}
+
+	cors := &routev3.CorsPolicy{}
+
+	if len(policy.Cors.AllowOriginStringMatchPrefix) > 0 {
+
+		hasCors = true
+
+		cors.AllowOriginStringMatch = []*matcherv3.StringMatcher{}
+
+		for _, prefix := range policy.Cors.AllowOriginStringMatchPrefix {
+			cors.AllowOriginStringMatch = append(cors.AllowOriginStringMatch, &matcherv3.StringMatcher{
+				MatchPattern: &matcherv3.StringMatcher_Prefix{
+					Prefix: prefix,
+				},
+			})
+		}
+
+	}
+
+	if len(policy.Cors.AllowHeaders) > 0 {
+
+		hasCors = true
+
+		cors.AllowHeaders = strings.Join(policy.Cors.AllowHeaders, ",")
+
+	}
+
+	if len(policy.Cors.AllowMethods) > 0 {
+
+		hasCors = true
+
+		cors.AllowMethods = strings.Join(policy.Cors.AllowMethods, ",")
+
+	}
+
+	if len(policy.Cors.ExposeHeaders) > 0 {
+
+		hasCors = true
+
+		cors.ExposeHeaders = strings.Join(policy.Cors.ExposeHeaders, ",")
+
+	}
+
+	if policy.Cors.MaxAge != nil {
+
+		hasCors = true
+
+		maxAge := strconv.FormatInt(int64(policy.Cors.MaxAge.AsDuration().Seconds()), 10)
+
+		cors.MaxAge = fmt.Sprintf("%ss", maxAge)
+
+	}
+
+	if hasCors {
+		return cors
+	}
+
+	return nil
+
+}
+
 func (r *routing) processChanges() {
 
 	vhxMap := map[string]*virtualHostExt{}
@@ -142,6 +217,7 @@ func (r *routing) processChanges() {
 					Name:    name,
 					Domains: []string{policy.Domain},
 					Routes:  []*routev3.Route{},
+					Cors:    makeCors(policy),
 				},
 				routeMap: make(map[string]interface{}),
 			}
