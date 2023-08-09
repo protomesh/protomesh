@@ -10,7 +10,7 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
-	tmemporalsdk "go.temporal.io/sdk/temporal"
+	temporalsdk "go.temporal.io/sdk/temporal"
 )
 
 func (w *Worker[Dependency]) Trigger(ctx context.Context, trigger *typesv1.Trigger) error {
@@ -128,7 +128,7 @@ func triggerToWorkflowStartOptions(trigger *typesv1.Trigger) (*client.StartWorkf
 	// Set retry policy
 	if trigger.RetryPolicy != nil {
 
-		startOpts.RetryPolicy = &tmemporalsdk.RetryPolicy{}
+		startOpts.RetryPolicy = &temporalsdk.RetryPolicy{}
 
 		if trigger.RetryPolicy.InitialInterval.IsValid() {
 			if tout := trigger.RetryPolicy.InitialInterval.AsDuration(); tout > 0 {
@@ -238,7 +238,7 @@ func triggerToWorkflowStartOptions(trigger *typesv1.Trigger) (*client.StartWorkf
 // 	// Set retry policy
 // 	if workTrigger.RetryPolicy != nil {
 
-// 		childOpts.RetryPolicy = &tmemporalsdk.RetryPolicy{}
+// 		childOpts.RetryPolicy = &temporalsdk.RetryPolicy{}
 
 // 		if workTrigger.RetryPolicy.InitialInterval.IsValid() {
 // 			if tout := workTrigger.RetryPolicy.InitialInterval.AsDuration(); tout > 0 {
