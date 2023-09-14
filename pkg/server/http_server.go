@@ -13,6 +13,8 @@ import (
 	"github.com/protomesh/protomesh/pkg/config"
 	"github.com/protomesh/protomesh/pkg/gateway"
 	tlsprovider "github.com/protomesh/protomesh/provider/tls"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 type HttpGateway interface {
@@ -80,7 +82,16 @@ func (h *HttpServer[D]) Start() {
 	}
 
 	h.addr = listener.Addr().String()
-	h.Server = &http.Server{Handler: h}
+
+	if h.DisableTls.BoolVal() {
+
+		h.Server = &http.Server{
+			Handler: h2c.NewHandler(h, &http2.Server{}),
+		}
+
+	} else {
+		h.Server = &http.Server{Handler: h}
+	}
 
 	go func() {
 
