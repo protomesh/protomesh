@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -30,6 +31,8 @@ type HttpServer[D any] struct {
 	GrpcHandler http.Handler
 
 	ShutdownTimeout app.Config `config:"shutdown.timeout,duration" default:"120s" usage:"HTTP server shutdown timeout before closing"`
+
+	DisableTls app.Config `config:"tls.disable" default:"false" usage:"Disable TLS"`
 
 	closeCh chan error
 	addr    string
@@ -61,7 +64,20 @@ func (h *HttpServer[D]) Start() {
 
 	log := h.Log()
 
-	listener := h.TlsBuilder.BuildListener()
+	var listener net.Listener
+
+	if h.DisableTls.BoolVal() {
+		rawListener, err := net.Listen(h.TlsBuilder.Protocol.StringVal(), h.TlsBuilder.ListenerAddress.StringVal())
+
+		if err != nil {
+			log.Panic("Error creating http listener", "address", h.TlsBuilder.ListenerAddress.StringVal(), "error", err)
+			return
+		}
+
+		listener = rawListener
+	} else {
+		listener = h.TlsBuilder.BuildListener()
+	}
 
 	h.addr = listener.Addr().String()
 	h.Server = &http.Server{Handler: h}
