@@ -83,14 +83,8 @@ func (h *HttpServer[D]) Start() {
 
 	h.addr = listener.Addr().String()
 
-	if h.DisableTls.BoolVal() {
-
-		h.Server = &http.Server{
-			Handler: h2c.NewHandler(h, &http2.Server{}),
-		}
-
-	} else {
-		h.Server = &http.Server{Handler: h}
+	h.Server = &http.Server{
+		Handler: h2c.NewHandler(h, &http2.Server{}),
 	}
 
 	go func() {
