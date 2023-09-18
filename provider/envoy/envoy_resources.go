@@ -4,10 +4,12 @@ import (
 	"strings"
 	"time"
 
+	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	streamv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/stream/v3"
 	corsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
 	grpcwebv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_web/v3"
 	healthcheckv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/health_check/v3"
@@ -28,11 +30,37 @@ import (
 
 func fromHttpIngress(node *typesv1.HttpIngress) (*listenerv3.Listener, *routev3.RouteConfiguration, error) {
 
+	var accessLogs []*accesslogv3.AccessLog
+
+	if len(node.AccessLogStdoutFormat) > 0 {
+
+		stdoutAccessLog := &streamv3.StdoutAccessLog{
+			AccessLogFormat: &streamv3.StdoutAccessLog_LogFormat{
+				LogFormat: &corev3.SubstitutionFormatString{
+					Format: &corev3.SubstitutionFormatString_TextFormat{
+						TextFormat: node.AccessLogStdoutFormat,
+					},
+				},
+			},
+		}
+
+		accessLogTypedConfig, _ := anypb.New(stdoutAccessLog)
+
+		accessLogs = append(accessLogs, &accesslogv3.AccessLog{
+			Name: "envoy.access_loggers.stdout",
+			ConfigType: &accesslogv3.AccessLog_TypedConfig{
+				TypedConfig: accessLogTypedConfig,
+			},
+		})
+
+	}
+
 	httpConn := &http_connection_managerv3.HttpConnectionManager{
 		HttpFilters:       []*http_connection_managerv3.HttpFilter{},
 		StatPrefix:        node.IngressName,
 		CodecType:         http_connection_managerv3.HttpConnectionManager_AUTO,
 		StreamIdleTimeout: durationpb.New(0),
+		AccessLog:         accessLogs,
 		RouteSpecifier: &http_connection_managerv3.HttpConnectionManager_Rds{
 			Rds: &http_connection_managerv3.Rds{
 				ConfigSource: &corev3.ConfigSource{

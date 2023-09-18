@@ -206,6 +206,8 @@ message HttpIngress {
   int32 listen_port = 3;
   // Http filters to apply to the ingress listener.
   repeated HttpFilter http_filters = 4;
+  // Access log stdout format
+  string access_log_stdout_format = 5;
 }
 
 // InstanceSet is a group of instances that provides the same service through a well known port.
