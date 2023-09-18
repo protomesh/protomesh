@@ -4,18 +4,20 @@ import (
 	"errors"
 	"io"
 
+	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/gateway"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func GrpcHandlerFromGateway(g GrpcGateway) grpc.StreamHandler {
+func GrpcHandlerFromGateway(g GrpcGateway, log app.Logger) grpc.StreamHandler {
 
 	return func(srv interface{}, stream grpc.ServerStream) error {
 
 		call, err := g.MatchGrpc(stream)
 		if err != nil {
+			log.Error("Error matching gRPC call", "error", err)
 			return err
 		}
 
@@ -35,6 +37,7 @@ func GrpcHandlerFromGateway(g GrpcGateway) grpc.StreamHandler {
 						continue events
 					}
 					if receiveErr != nil {
+						log.Debug("Error receiving from stream", "error", receiveErr)
 						return receiveErr
 					}
 
@@ -44,6 +47,7 @@ func GrpcHandlerFromGateway(g GrpcGateway) grpc.StreamHandler {
 						continue events
 					}
 					if sendErr != nil {
+						log.Debug("Error sending to stream", "error", sendErr)
 						return sendErr
 					}
 

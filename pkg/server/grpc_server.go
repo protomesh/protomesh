@@ -51,7 +51,7 @@ func (g *GrpcServer[Dependency]) Initialize() {
 		opts = append(
 			opts,
 			grpc.CustomCodec(Codec()),
-			grpc.UnknownServiceHandler(GrpcHandlerFromGateway(g.Gateway)),
+			grpc.UnknownServiceHandler(GrpcHandlerFromGateway(g.Gateway, g.Log().With("component", "grpc_proxy"))),
 		)
 
 	}

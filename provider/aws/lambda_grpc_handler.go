@@ -47,6 +47,8 @@ type lambdaGrpcHandler struct {
 
 func (l *lambdaGrpcHandler) Call(payload []byte) error {
 
+	log := l.log
+
 	defer func() {
 		l.waitCall <- nil
 		if l.isLastResult {
@@ -67,6 +69,7 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 
 	in, err := json.Marshal(req)
 	if err != nil {
+		log.Error("Error marshalling request", "error", err)
 		return err
 	}
 
@@ -77,14 +80,17 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 		Payload:        in,
 	})
 	if out != nil && out.FunctionError != nil {
+		log.Error("Lambda function returned error", "error", aws.ToString(out.FunctionError))
 		return fmt.Errorf("Lambda function returned error: %s", aws.ToString(out.FunctionError))
 	}
 	if err != nil {
+		log.Error("Error invoking lambda function", "error", err)
 		return err
 	}
 
 	res := &events.APIGatewayProxyResponse{}
 	if err := json.Unmarshal(out.Payload, res); err != nil {
+		log.Error("Error unmarshalling response", "error", err)
 		return err
 	}
 
@@ -94,6 +100,7 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 
 		result, err := base64.RawStdEncoding.DecodeString(res.Body)
 		if err != nil {
+			log.Error("Error decoding base64 response", "error", err)
 			return err
 		}
 
@@ -110,6 +117,8 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 	// This status code is used for gRPC server-side streaming.
 	case http.StatusProcessing:
 
+		log.Debug("Lambda function returned server-side stream")
+
 		serverStreamTimeout, ok := l.outgoingMetadata[l.serverStreamTimeoutHeader]
 
 		l.clientRequestPayload = payload
@@ -119,6 +128,7 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 
 			d, err := time.ParseDuration(serverStreamTimeout[0])
 			if err != nil {
+				log.Error("Error parsing server stream timeout", "error", err)
 				return status.Errorf(codes.Internal, "invalid %s header: %s", l.serverStreamTimeoutHeader, serverStreamTimeout)
 			}
 
@@ -138,48 +148,64 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 		}
 
 	case http.StatusGone:
+		log.Debug("Lambda function returned gone")
 		return status.Error(codes.Aborted, res.Body)
 
 	case http.StatusBadRequest:
+		log.Debug("Lambda function returned bad request")
 		return status.Error(codes.InvalidArgument, res.Body)
 
 	case http.StatusPreconditionFailed:
+		log.Debug("Lambda function returned precondition failed")
 		return status.Error(codes.FailedPrecondition, res.Body)
 
 	case http.StatusNotFound:
+		log.Debug("Lambda function returned not found")
 		return status.Error(codes.NotFound, res.Body)
 
 	case http.StatusNotImplemented:
+		log.Debug("Lambda function returned not implemented")
 		return status.Error(codes.Unimplemented, res.Body)
 
 	case http.StatusInternalServerError:
+		log.Debug("Lambda function returned internal server error")
 		return status.Error(codes.Internal, res.Body)
 
 	case http.StatusGatewayTimeout:
+		log.Debug("Lambda function returned gateway timeout")
 		return status.Error(codes.DeadlineExceeded, res.Body)
 
 	case http.StatusNoContent:
+		log.Debug("Lambda function returned no content")
 		return status.Error(codes.OutOfRange, res.Body)
 
 	case http.StatusTooManyRequests:
+		log.Debug("Lambda function returned too many requests")
 		return status.Error(codes.ResourceExhausted, res.Body)
 
 	case http.StatusServiceUnavailable:
+		log.Debug("Lambda function returned service unavailable")
 		return status.Error(codes.Unavailable, res.Body)
 
 	case http.StatusConflict:
+		log.Debug("Lambda function returned conflict")
 		return status.Error(codes.AlreadyExists, res.Body)
 
 	case http.StatusForbidden:
+		log.Debug("Lambda function returned forbidden")
 		return status.Error(codes.Unauthenticated, res.Body)
 
 	case http.StatusInsufficientStorage:
+		log.Debug("Lambda function returned insufficient storage")
 		return status.Error(codes.DataLoss, res.Body)
 
 	case http.StatusUnauthorized:
+		log.Debug("Lambda function returned unauthorized")
 		return status.Error(codes.PermissionDenied, res.Body)
 
 	}
+
+	log.Debug("Lambda function returned ok")
 
 	return io.EOF
 
@@ -191,6 +217,7 @@ func (l *lambdaGrpcHandler) Result() ([]byte, error) {
 	l.resultCount++
 
 	if l.isLastResult {
+		l.log.Debug("Lambda function returned last result")
 		return l.result, io.EOF
 	}
 
@@ -204,5 +231,6 @@ func (l *lambdaGrpcHandler) Result() ([]byte, error) {
 }
 
 func (l *lambdaGrpcHandler) GetOutgoingMetadata() metadata.MD {
+	l.log.Debug("Lambda function returned outgoing metadata")
 	return l.outgoingMetadata
 }
