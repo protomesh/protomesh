@@ -88,8 +88,6 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 			case <-l.subscriber.Stream():
 			}
 		}
-	} else if l.subscriber != nil {
-		<-l.subscriber.Stream()
 	}
 
 	req := &events.APIGatewayProxyRequest{

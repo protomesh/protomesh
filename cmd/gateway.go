@@ -102,6 +102,8 @@ func (p *GatewayInstance[D]) Initialize() {
 
 				p.AwsLambdaHandler.LambdaStreamSubscriber = p.AwsLambdaPubSub
 
+				log.Info("AWS Lambda stream subscriber enabled")
+
 			}
 
 			log.Info("Initialized AWS Lambda handler")
@@ -132,6 +134,8 @@ func (p *GatewayInstance[D]) Start() {
 	if p.awsLambdaRedisPubSubDriver != nil {
 
 		streamPrefix := p.AwsLambdaHandler.ServerStreamTopicPrefix.StringVal()
+
+		p.Log().Info("Starting AWS Lambda stream subscriber", "streamPrefix", streamPrefix)
 
 		p.awsLambdaRedisPubSubDriver.Listen(p.ctx, true, fmt.Sprintf("%s*", streamPrefix))
 
