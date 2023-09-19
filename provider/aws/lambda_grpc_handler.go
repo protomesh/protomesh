@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -47,9 +48,17 @@ type lambdaGrpcHandler struct {
 
 	subscriber pubsub.Subscriber[*LambdaNotification]
 	pubsub     pubsub.PubSubSubscriber[*LambdaNotification]
+
+	service string
+	method  string
 }
 
 func (l *lambdaGrpcHandler) attachPubSub(pubsubSubcriber pubsub.PubSubSubscriber[*LambdaNotification], subscriber pubsub.Subscriber[*LambdaNotification]) {
+
+	pathParts := strings.Split(l.fullPath, "/")
+
+	l.service = pathParts[len(pathParts)-2]
+	l.method = pathParts[len(pathParts)-1]
 
 	l.subscriber = subscriber
 	l.pubsub = pubsubSubcriber
@@ -83,9 +92,19 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 		if l.subscriber == nil {
 			<-l.serverStreamTimeout.C
 		} else {
-			select {
-			case <-l.serverStreamTimeout.C:
-			case <-l.subscriber.Stream():
+
+		waitSignal:
+			for {
+				select {
+				case <-l.serverStreamTimeout.C:
+					break waitSignal
+				case msg := <-l.subscriber.Stream():
+					if len(msg.Payload.Service) == 0 || msg.Payload.Service == l.service {
+						if len(msg.Payload.Method) == 0 || msg.Payload.Method == l.method {
+							break waitSignal
+						}
+					}
+				}
 			}
 		}
 	}

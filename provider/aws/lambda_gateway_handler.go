@@ -23,7 +23,8 @@ var (
 )
 
 type LambdaNotification struct {
-	ServerStreamKey string `json:"server_stream_key"`
+	Service string `json:"service"`
+	Method  string `json:"method"`
 }
 
 func LambdaNotificationRedisDeserializer(redisMsg *redis.Message) *pubsub.Message[*LambdaNotification] {

@@ -137,7 +137,7 @@ func (p *GatewayInstance[D]) Start() {
 
 		p.Log().Info("Starting AWS Lambda stream subscriber", "streamPrefix", streamPrefix)
 
-		p.awsLambdaRedisPubSubDriver.Listen(p.ctx, true, fmt.Sprintf("%s*", streamPrefix))
+		p.awsLambdaRedisPubSubDriver.Listen(p.ctx, p.Log().With("component", "awsLambdaRedisPubSubDriver"), true, fmt.Sprintf("%s*", streamPrefix))
 
 	}
 

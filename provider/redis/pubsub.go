@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/pubsub"
 	"github.com/redis/go-redis/v9"
 )
@@ -13,7 +14,7 @@ type RedisListener interface {
 }
 
 type RedisPubSubDriver interface {
-	Listen(ctx context.Context, blockingPublish bool, topics ...string) RedisListener
+	Listen(ctx context.Context, log app.Logger, blockingPublish bool, topics ...string) RedisListener
 }
 
 type RedisPubSubDeserializer[T any] func(*redis.Message) *pubsub.Message[T]
@@ -38,9 +39,20 @@ func NewRedisPubSubDriver[T any](rdb redis.UniversalClient, pub pubsub.PubSubPub
 	}
 }
 
-func (r *redisPubSubDriver[T]) Listen(ctx context.Context, blockingPublish bool, topics ...string) RedisListener {
+func (r *redisPubSubDriver[T]) Listen(ctx context.Context, log app.Logger, blockingPublish bool, topics ...string) RedisListener {
 
 	redisPubsub := r.rdb.PSubscribe(ctx, topics...)
+
+	v, err := redisPubsub.Receive(ctx)
+	if err != nil {
+		log.Panic("Redis pubsub listener failed", "err", err)
+	}
+
+	switch v := v.(type) {
+	case redis.Subscription:
+		log.Info("Redis pubsub listener started", "channel", v.Channel, "kind", v.Kind, "count", v.Count)
+
+	}
 
 	ch := redisPubsub.Channel(redis.WithChannelSendTimeout(60 * time.Second))
 
@@ -48,8 +60,11 @@ func (r *redisPubSubDriver[T]) Listen(ctx context.Context, blockingPublish bool,
 		for {
 			select {
 			case msg := <-ch:
+				log.Debug("Redis pubsub message received", "topic", msg.Channel, "payload", msg.Payload)
 				r.pub.Publish(blockingPublish, r.deserializer(msg))
+				log.Debug("Redis pubsub message published", "topic", msg.Channel, "payload", msg.Payload)
 			case <-ctx.Done():
+				log.Debug("Redis pubsub listener stopped", "err", ctx.Err())
 				return
 			}
 		}
