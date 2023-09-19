@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/protomesh/go-app"
 	"github.com/redis/go-redis/v9"
@@ -54,7 +55,11 @@ func (rc *RedisClient[D]) lookupSrvRecords(record string) ([]string, error) {
 
 	log := rc.Log().With("driver", "redis")
 
-	cname, srvs, err := net.LookupSRV("", "", record)
+	recordParts := strings.Split(record, ":")
+
+	hostname := recordParts[0]
+
+	cname, srvs, err := net.LookupSRV("", "", hostname)
 	if err != nil {
 		log.Error("Failed to lookup SRV records", "error", err)
 		return nil, err
