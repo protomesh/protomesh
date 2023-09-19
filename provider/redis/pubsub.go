@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"time"
 
 	"github.com/protomesh/protomesh/pkg/pubsub"
 	"github.com/redis/go-redis/v9"
@@ -39,9 +40,9 @@ func NewRedisPubSubDriver[T any](rdb redis.UniversalClient, pub pubsub.PubSubPub
 
 func (r *redisPubSubDriver[T]) Listen(ctx context.Context, blockingPublish bool, topics ...string) RedisListener {
 
-	redisPubsub := r.rdb.Subscribe(ctx, topics...)
+	redisPubsub := r.rdb.PSubscribe(ctx, topics...)
 
-	ch := redisPubsub.Channel()
+	ch := redisPubsub.Channel(redis.WithChannelSendTimeout(60 * time.Second))
 
 	go func(ctx context.Context, ch <-chan *redis.Message) {
 		for {
