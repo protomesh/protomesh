@@ -40,6 +40,11 @@ message GatewayPolicy {
   // When an error occurs, the error is returned to the client.
   repeated Handler handlers = 3;
 
+  // This field specifies which header or gRPC incoming metadata key to use
+  // to determine if the handler should be invoked.
+  // It uses the PubSub drivers from protomesh.
+  string lambda_stream_signal_header_key = 4;
+
 }
 
 // HttpSource is used by the Protomesh gateway to handle HTTP requests.

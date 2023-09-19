@@ -20,6 +20,7 @@ type GrpcHandler interface {
 	Call([]byte) error
 	Result() ([]byte, error)
 	GetOutgoingMetadata() metadata.MD
+	Close()
 }
 
 type HttpCall struct {

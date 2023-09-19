@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
 	"github.com/protomesh/go-app"
+	"github.com/protomesh/protomesh/pkg/pubsub"
 	typesv1 "github.com/protomesh/protomesh/proto/api/types/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -43,6 +44,28 @@ type lambdaGrpcHandler struct {
 	waitCall chan interface{}
 
 	outgoingMetadata metadata.MD
+
+	subscriber pubsub.Subscriber[*LambdaNotification]
+	pubsub     pubsub.PubSubSubscriber[*LambdaNotification]
+}
+
+func (l *lambdaGrpcHandler) attachPubSub(pubsubSubcriber pubsub.PubSubSubscriber[*LambdaNotification], subscriber pubsub.Subscriber[*LambdaNotification]) {
+
+	l.subscriber = subscriber
+	l.pubsub = pubsubSubcriber
+
+}
+
+func (l *lambdaGrpcHandler) unsubscribe() {
+
+	if l.subscriber != nil {
+
+		l.log.Debug("Unsubscribing from pubsub", "subscriber", l.subscriber.ID())
+
+		l.pubsub.Unsubscribe(l.subscriber.ID())
+
+	}
+
 }
 
 func (l *lambdaGrpcHandler) Call(payload []byte) error {
@@ -57,7 +80,16 @@ func (l *lambdaGrpcHandler) Call(payload []byte) error {
 	}()
 
 	if l.serverStreamTimeout != nil {
-		<-l.serverStreamTimeout.C
+		if l.subscriber == nil {
+			<-l.serverStreamTimeout.C
+		} else {
+			select {
+			case <-l.serverStreamTimeout.C:
+			case <-l.subscriber.Stream():
+			}
+		}
+	} else if l.subscriber != nil {
+		<-l.subscriber.Stream()
 	}
 
 	req := &events.APIGatewayProxyRequest{
@@ -233,4 +265,8 @@ func (l *lambdaGrpcHandler) Result() ([]byte, error) {
 func (l *lambdaGrpcHandler) GetOutgoingMetadata() metadata.MD {
 	l.log.Debug("Lambda function returned outgoing metadata")
 	return l.outgoingMetadata
+}
+
+func (l *lambdaGrpcHandler) Close() {
+	l.unsubscribe()
 }

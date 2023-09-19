@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -10,8 +11,10 @@ import (
 	"github.com/protomesh/go-app"
 	"github.com/protomesh/protomesh/pkg/client"
 	"github.com/protomesh/protomesh/pkg/gateway"
+	"github.com/protomesh/protomesh/pkg/pubsub"
 	servicesv1 "github.com/protomesh/protomesh/proto/api/services/v1"
 	awsprovider "github.com/protomesh/protomesh/provider/aws"
+	"github.com/protomesh/protomesh/provider/redis"
 	"google.golang.org/grpc"
 )
 
@@ -44,6 +47,10 @@ type GatewayInstance[D GatewayDeps] struct {
 	gatewayErrCh <-chan error
 
 	AwsLambdaHandler *awsprovider.LambdaGatewayHandler[GatewayInjector] `config:"aws.lambda"`
+
+	RedisClient                *redis.RedisClient[GatewayInjector] `config:"redis"`
+	AwsLambdaPubSub            pubsub.PubSub[*awsprovider.LambdaNotification]
+	awsLambdaRedisPubSubDriver redis.RedisPubSubDriver
 }
 
 func NewGatewayInstance[D GatewayDeps]() *GatewayInstance[D] {
@@ -51,6 +58,7 @@ func NewGatewayInstance[D GatewayDeps]() *GatewayInstance[D] {
 		ResourceStore:    &client.GrpcClient[GatewayInjector]{},
 		Gateway:          &gateway.Gateway[GatewayInjector]{},
 		AwsLambdaHandler: &awsprovider.LambdaGatewayHandler[GatewayInjector]{},
+		RedisClient:      &redis.RedisClient[GatewayInjector]{},
 	}
 }
 
@@ -66,6 +74,8 @@ func (p *GatewayInstance[D]) Initialize() {
 
 	log := p.Log()
 
+	p.RedisClient.Initialize()
+
 	handlerTypes := strings.Split(p.Handlers.StringVal(), ",")
 
 	handlers := []gateway.GatewayHandler{}
@@ -77,6 +87,22 @@ func (p *GatewayInstance[D]) Initialize() {
 		case gateway.HandlerTypeAwsLambda:
 
 			p.AwsLambdaHandler.Initialize()
+
+			streamPrefix := p.AwsLambdaHandler.ServerStreamTopicPrefix.StringVal()
+
+			if p.RedisClient.Client != nil && len(streamPrefix) > 0 {
+
+				p.AwsLambdaPubSub = pubsub.NewPubSub[*awsprovider.LambdaNotification](false, 0, 0)
+
+				p.awsLambdaRedisPubSubDriver = redis.NewRedisPubSubDriver[*awsprovider.LambdaNotification](
+					p.RedisClient.Client,
+					p.AwsLambdaPubSub,
+					awsprovider.LambdaNotificationRedisDeserializer,
+				)
+
+				p.AwsLambdaHandler.LambdaStreamSubscriber = p.AwsLambdaPubSub
+
+			}
 
 			log.Info("Initialized AWS Lambda handler")
 
@@ -102,6 +128,15 @@ func (p *GatewayInstance[D]) Start() {
 	p.resourceStoreClient = servicesv1.NewResourceStoreClient(p.ResourceStore.ClientConn)
 
 	p.gatewayErrCh = p.Gateway.Sync(p.ctx)
+
+	if p.awsLambdaRedisPubSubDriver != nil {
+
+		streamPrefix := p.AwsLambdaHandler.ServerStreamTopicPrefix.StringVal()
+
+		p.awsLambdaRedisPubSubDriver.Listen(p.ctx, true, fmt.Sprintf("%s*", streamPrefix))
+
+	}
+
 }
 
 func (p *GatewayInstance[D]) Stop() {
@@ -111,5 +146,9 @@ func (p *GatewayInstance[D]) Stop() {
 	<-p.gatewayErrCh
 
 	p.ResourceStore.Stop()
+
+	if p.AwsLambdaPubSub != nil {
+		p.AwsLambdaPubSub.Close()
+	}
 
 }

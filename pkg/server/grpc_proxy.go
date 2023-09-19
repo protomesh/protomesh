@@ -23,6 +23,8 @@ func GrpcHandlerFromGateway(g GrpcGateway, log app.Logger) grpc.StreamHandler {
 
 		for _, handler := range call.Handlers {
 
+			defer handler.Close()
+
 			receiveCh := ReceiveFrom(stream, handler)
 			sendCh := SendFrom(stream, handler)
 
