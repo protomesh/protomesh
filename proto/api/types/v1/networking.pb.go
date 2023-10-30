@@ -1108,6 +1108,64 @@ func (x *HttpFilter_JwtAuthn_RemoteJwks) GetTimeout() *durationpb.Duration {
 	return nil
 }
 
+// JWKS can be fetched from local file system. This field specifies the local file path.
+type HttpFilter_JwtAuthn_LocalJwks struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Content of the JWKS file.
+	InlineString string `protobuf:"bytes,1,opt,name=inline_string,json=inlineString,proto3" json:"inline_string,omitempty"`
+	// Local file path to the JWKS file.
+	Filename string `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
+}
+
+func (x *HttpFilter_JwtAuthn_LocalJwks) Reset() {
+	*x = HttpFilter_JwtAuthn_LocalJwks{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_types_v1_networking_proto_msgTypes[12]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *HttpFilter_JwtAuthn_LocalJwks) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HttpFilter_JwtAuthn_LocalJwks) ProtoMessage() {}
+
+func (x *HttpFilter_JwtAuthn_LocalJwks) ProtoReflect() protoreflect.Message {
+	mi := &file_api_types_v1_networking_proto_msgTypes[12]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HttpFilter_JwtAuthn_LocalJwks.ProtoReflect.Descriptor instead.
+func (*HttpFilter_JwtAuthn_LocalJwks) Descriptor() ([]byte, []int) {
+	return file_api_types_v1_networking_proto_rawDescGZIP(), []int{1, 3, 2}
+}
+
+func (x *HttpFilter_JwtAuthn_LocalJwks) GetInlineString() string {
+	if x != nil {
+		return x.InlineString
+	}
+	return ""
+}
+
+func (x *HttpFilter_JwtAuthn_LocalJwks) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
 // FromHeader specify headers to get the JWT from.
 type HttpFilter_JwtAuthn_FromHeader struct {
 	state         protoimpl.MessageState
@@ -1124,7 +1182,7 @@ type HttpFilter_JwtAuthn_FromHeader struct {
 func (x *HttpFilter_JwtAuthn_FromHeader) Reset() {
 	*x = HttpFilter_JwtAuthn_FromHeader{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_types_v1_networking_proto_msgTypes[12]
+		mi := &file_api_types_v1_networking_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1137,7 +1195,7 @@ func (x *HttpFilter_JwtAuthn_FromHeader) String() string {
 func (*HttpFilter_JwtAuthn_FromHeader) ProtoMessage() {}
 
 func (x *HttpFilter_JwtAuthn_FromHeader) ProtoReflect() protoreflect.Message {
-	mi := &file_api_types_v1_networking_proto_msgTypes[12]
+	mi := &file_api_types_v1_networking_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1150,7 +1208,7 @@ func (x *HttpFilter_JwtAuthn_FromHeader) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HttpFilter_JwtAuthn_FromHeader.ProtoReflect.Descriptor instead.
 func (*HttpFilter_JwtAuthn_FromHeader) Descriptor() ([]byte, []int) {
-	return file_api_types_v1_networking_proto_rawDescGZIP(), []int{1, 3, 2}
+	return file_api_types_v1_networking_proto_rawDescGZIP(), []int{1, 3, 3}
 }
 
 func (x *HttpFilter_JwtAuthn_FromHeader) GetHeaderName() string {
@@ -1187,6 +1245,8 @@ type HttpFilter_JwtAuthn_Provider struct {
 	// JWKS can be fetched from remote server via HTTP/HTTPS.
 	// This field specifies the remote HTTP URI and how the fetched JWKS should be cached.
 	RemoteJwks *HttpFilter_JwtAuthn_RemoteJwks `protobuf:"bytes,5,opt,name=remote_jwks,json=remoteJwks,proto3" json:"remote_jwks,omitempty"`
+	// JWKS can be fetched from local file system.
+	LocalJwks *HttpFilter_JwtAuthn_LocalJwks `protobuf:"bytes,8,opt,name=local_jwks,json=localJwks,proto3" json:"local_jwks,omitempty"`
 	// Add JWT claim to HTTP Header Specify the claim name you want to
 	// copy in which HTTP header. For examples, following config:
 	// The claim must be of type; string, int, double, bool.
@@ -1199,7 +1259,7 @@ type HttpFilter_JwtAuthn_Provider struct {
 func (x *HttpFilter_JwtAuthn_Provider) Reset() {
 	*x = HttpFilter_JwtAuthn_Provider{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_types_v1_networking_proto_msgTypes[13]
+		mi := &file_api_types_v1_networking_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1212,7 +1272,7 @@ func (x *HttpFilter_JwtAuthn_Provider) String() string {
 func (*HttpFilter_JwtAuthn_Provider) ProtoMessage() {}
 
 func (x *HttpFilter_JwtAuthn_Provider) ProtoReflect() protoreflect.Message {
-	mi := &file_api_types_v1_networking_proto_msgTypes[13]
+	mi := &file_api_types_v1_networking_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1225,7 +1285,7 @@ func (x *HttpFilter_JwtAuthn_Provider) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HttpFilter_JwtAuthn_Provider.ProtoReflect.Descriptor instead.
 func (*HttpFilter_JwtAuthn_Provider) Descriptor() ([]byte, []int) {
-	return file_api_types_v1_networking_proto_rawDescGZIP(), []int{1, 3, 3}
+	return file_api_types_v1_networking_proto_rawDescGZIP(), []int{1, 3, 4}
 }
 
 func (x *HttpFilter_JwtAuthn_Provider) GetProviderName() string {
@@ -1263,6 +1323,13 @@ func (x *HttpFilter_JwtAuthn_Provider) GetRemoteJwks() *HttpFilter_JwtAuthn_Remo
 	return nil
 }
 
+func (x *HttpFilter_JwtAuthn_Provider) GetLocalJwks() *HttpFilter_JwtAuthn_LocalJwks {
+	if x != nil {
+		return x.LocalJwks
+	}
+	return nil
+}
+
 func (x *HttpFilter_JwtAuthn_Provider) GetClaimToHeaders() []*HttpFilter_JwtAuthn_ClaimToHeader {
 	if x != nil {
 		return x.ClaimToHeaders
@@ -1293,7 +1360,7 @@ type HttpFilter_JwtAuthn_Rule struct {
 func (x *HttpFilter_JwtAuthn_Rule) Reset() {
 	*x = HttpFilter_JwtAuthn_Rule{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_types_v1_networking_proto_msgTypes[14]
+		mi := &file_api_types_v1_networking_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1306,7 +1373,7 @@ func (x *HttpFilter_JwtAuthn_Rule) String() string {
 func (*HttpFilter_JwtAuthn_Rule) ProtoMessage() {}
 
 func (x *HttpFilter_JwtAuthn_Rule) ProtoReflect() protoreflect.Message {
-	mi := &file_api_types_v1_networking_proto_msgTypes[14]
+	mi := &file_api_types_v1_networking_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1319,7 +1386,7 @@ func (x *HttpFilter_JwtAuthn_Rule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HttpFilter_JwtAuthn_Rule.ProtoReflect.Descriptor instead.
 func (*HttpFilter_JwtAuthn_Rule) Descriptor() ([]byte, []int) {
-	return file_api_types_v1_networking_proto_rawDescGZIP(), []int{1, 3, 4}
+	return file_api_types_v1_networking_proto_rawDescGZIP(), []int{1, 3, 5}
 }
 
 func (x *HttpFilter_JwtAuthn_Rule) GetMatchPrefix() string {
@@ -1358,7 +1425,7 @@ type InstanceSet_Instance struct {
 func (x *InstanceSet_Instance) Reset() {
 	*x = InstanceSet_Instance{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_types_v1_networking_proto_msgTypes[15]
+		mi := &file_api_types_v1_networking_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1371,7 +1438,7 @@ func (x *InstanceSet_Instance) String() string {
 func (*InstanceSet_Instance) ProtoMessage() {}
 
 func (x *InstanceSet_Instance) ProtoReflect() protoreflect.Message {
-	mi := &file_api_types_v1_networking_proto_msgTypes[15]
+	mi := &file_api_types_v1_networking_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1439,7 +1506,7 @@ type Service_Http1Options struct {
 func (x *Service_Http1Options) Reset() {
 	*x = Service_Http1Options{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_types_v1_networking_proto_msgTypes[16]
+		mi := &file_api_types_v1_networking_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1452,7 +1519,7 @@ func (x *Service_Http1Options) String() string {
 func (*Service_Http1Options) ProtoMessage() {}
 
 func (x *Service_Http1Options) ProtoReflect() protoreflect.Message {
-	mi := &file_api_types_v1_networking_proto_msgTypes[16]
+	mi := &file_api_types_v1_networking_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1483,7 +1550,7 @@ type Service_Http2Options struct {
 func (x *Service_Http2Options) Reset() {
 	*x = Service_Http2Options{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_types_v1_networking_proto_msgTypes[17]
+		mi := &file_api_types_v1_networking_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1496,7 +1563,7 @@ func (x *Service_Http2Options) String() string {
 func (*Service_Http2Options) ProtoMessage() {}
 
 func (x *Service_Http2Options) ProtoReflect() protoreflect.Message {
-	mi := &file_api_types_v1_networking_proto_msgTypes[17]
+	mi := &file_api_types_v1_networking_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1538,7 +1605,7 @@ type RoutingPolicy_Route struct {
 func (x *RoutingPolicy_Route) Reset() {
 	*x = RoutingPolicy_Route{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_types_v1_networking_proto_msgTypes[18]
+		mi := &file_api_types_v1_networking_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1551,7 +1618,7 @@ func (x *RoutingPolicy_Route) String() string {
 func (*RoutingPolicy_Route) ProtoMessage() {}
 
 func (x *RoutingPolicy_Route) ProtoReflect() protoreflect.Message {
-	mi := &file_api_types_v1_networking_proto_msgTypes[18]
+	mi := &file_api_types_v1_networking_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1616,7 +1683,7 @@ type RoutingPolicy_Cors struct {
 func (x *RoutingPolicy_Cors) Reset() {
 	*x = RoutingPolicy_Cors{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_types_v1_networking_proto_msgTypes[19]
+		mi := &file_api_types_v1_networking_proto_msgTypes[20]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1629,7 +1696,7 @@ func (x *RoutingPolicy_Cors) String() string {
 func (*RoutingPolicy_Cors) ProtoMessage() {}
 
 func (x *RoutingPolicy_Cors) ProtoReflect() protoreflect.Message {
-	mi := &file_api_types_v1_networking_proto_msgTypes[19]
+	mi := &file_api_types_v1_networking_proto_msgTypes[20]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1712,7 +1779,7 @@ var file_api_types_v1_networking_proto_rawDesc = []byte{
 	0x61, 0x6e, 0x63, 0x65, 0x53, 0x65, 0x74, 0x48, 0x00, 0x52, 0x0b, 0x69, 0x6e, 0x73, 0x74, 0x61,
 	0x6e, 0x63, 0x65, 0x53, 0x65, 0x74, 0x3a, 0x06, 0xba, 0xb9, 0x02, 0x02, 0x08, 0x01, 0x42, 0x11,
 	0x0a, 0x0f, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x69, 0x6e, 0x67, 0x5f, 0x6e, 0x6f, 0x64,
-	0x65, 0x22, 0xa7, 0x0b, 0x0a, 0x0a, 0x48, 0x74, 0x74, 0x70, 0x46, 0x69, 0x6c, 0x74, 0x65, 0x72,
+	0x65, 0x22, 0xc7, 0x0c, 0x0a, 0x0a, 0x48, 0x74, 0x74, 0x70, 0x46, 0x69, 0x6c, 0x74, 0x65, 0x72,
 	0x12, 0x39, 0x0a, 0x04, 0x63, 0x6f, 0x72, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x23,
 	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x6d, 0x65, 0x73, 0x68, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73,
 	0x2e, 0x76, 0x31, 0x2e, 0x48, 0x74, 0x74, 0x70, 0x46, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x2e, 0x43,
@@ -1738,7 +1805,7 @@ var file_api_types_v1_networking_proto_rawDesc = []byte{
 	0x02, 0x02, 0x10, 0x01, 0x52, 0x06, 0x65, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x1a, 0x29, 0x0a, 0x07,
 	0x47, 0x72, 0x70, 0x63, 0x57, 0x65, 0x62, 0x12, 0x1e, 0x0a, 0x06, 0x65, 0x6e, 0x61, 0x62, 0x6c,
 	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x42, 0x06, 0xba, 0xb9, 0x02, 0x02, 0x10, 0x01, 0x52,
-	0x06, 0x65, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x1a, 0xef, 0x07, 0x0a, 0x08, 0x4a, 0x77, 0x74, 0x41,
+	0x06, 0x65, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x1a, 0x8f, 0x09, 0x0a, 0x08, 0x4a, 0x77, 0x74, 0x41,
 	0x75, 0x74, 0x68, 0x6e, 0x12, 0x4e, 0x0a, 0x09, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72,
 	0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x30, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x6d,
 	0x65, 0x73, 0x68, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x76, 0x31, 0x2e, 0x48, 0x74, 0x74,
@@ -1762,28 +1829,38 @@ var file_api_types_v1_networking_proto_rawDesc = []byte{
 	0x65, 0x72, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x33, 0x0a, 0x07, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75,
 	0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x19, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
 	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x44, 0x75, 0x72, 0x61, 0x74, 0x69,
-	0x6f, 0x6e, 0x52, 0x07, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x1a, 0x60, 0x0a, 0x0a, 0x46,
-	0x72, 0x6f, 0x6d, 0x48, 0x65, 0x61, 0x64, 0x65, 0x72, 0x12, 0x27, 0x0a, 0x0b, 0x68, 0x65, 0x61,
-	0x64, 0x65, 0x72, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x06,
-	0xba, 0xb9, 0x02, 0x02, 0x10, 0x01, 0x52, 0x0a, 0x68, 0x65, 0x61, 0x64, 0x65, 0x72, 0x4e, 0x61,
-	0x6d, 0x65, 0x12, 0x29, 0x0a, 0x0c, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x5f, 0x70, 0x72, 0x65, 0x66,
-	0x69, 0x78, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x42, 0x06, 0xba, 0xb9, 0x02, 0x02, 0x10, 0x01,
-	0x52, 0x0b, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x50, 0x72, 0x65, 0x66, 0x69, 0x78, 0x1a, 0xa4, 0x03,
-	0x0a, 0x08, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x12, 0x2b, 0x0a, 0x0d, 0x70, 0x72,
-	0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x42, 0x06, 0xba, 0xb9, 0x02, 0x02, 0x10, 0x01, 0x52, 0x0c, 0x70, 0x72, 0x6f, 0x76, 0x69,
-	0x64, 0x65, 0x72, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x20, 0x0a, 0x07, 0x66, 0x6f, 0x72, 0x77, 0x61,
-	0x72, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x42, 0x06, 0xba, 0xb9, 0x02, 0x02, 0x10, 0x01,
-	0x52, 0x07, 0x66, 0x6f, 0x72, 0x77, 0x61, 0x72, 0x64, 0x12, 0x1e, 0x0a, 0x06, 0x69, 0x73, 0x73,
-	0x75, 0x65, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x42, 0x06, 0xba, 0xb9, 0x02, 0x02, 0x10,
-	0x01, 0x52, 0x06, 0x69, 0x73, 0x73, 0x75, 0x65, 0x72, 0x12, 0x1c, 0x0a, 0x09, 0x61, 0x75, 0x64,
-	0x69, 0x65, 0x6e, 0x63, 0x65, 0x73, 0x18, 0x04, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09, 0x61, 0x75,
-	0x64, 0x69, 0x65, 0x6e, 0x63, 0x65, 0x73, 0x12, 0x53, 0x0a, 0x0b, 0x72, 0x65, 0x6d, 0x6f, 0x74,
-	0x65, 0x5f, 0x6a, 0x77, 0x6b, 0x73, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x32, 0x2e, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x6d, 0x65, 0x73, 0x68, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x76,
-	0x31, 0x2e, 0x48, 0x74, 0x74, 0x70, 0x46, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x2e, 0x4a, 0x77, 0x74,
-	0x41, 0x75, 0x74, 0x68, 0x6e, 0x2e, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4a, 0x77, 0x6b, 0x73,
-	0x52, 0x0a, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4a, 0x77, 0x6b, 0x73, 0x12, 0x5f, 0x0a, 0x10,
+	0x6f, 0x6e, 0x52, 0x07, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x1a, 0x4c, 0x0a, 0x09, 0x4c,
+	0x6f, 0x63, 0x61, 0x6c, 0x4a, 0x77, 0x6b, 0x73, 0x12, 0x23, 0x0a, 0x0d, 0x69, 0x6e, 0x6c, 0x69,
+	0x6e, 0x65, 0x5f, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x0c, 0x69, 0x6e, 0x6c, 0x69, 0x6e, 0x65, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x12, 0x1a, 0x0a,
+	0x08, 0x66, 0x69, 0x6c, 0x65, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x08, 0x66, 0x69, 0x6c, 0x65, 0x6e, 0x61, 0x6d, 0x65, 0x1a, 0x60, 0x0a, 0x0a, 0x46, 0x72, 0x6f,
+	0x6d, 0x48, 0x65, 0x61, 0x64, 0x65, 0x72, 0x12, 0x27, 0x0a, 0x0b, 0x68, 0x65, 0x61, 0x64, 0x65,
+	0x72, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x06, 0xba, 0xb9,
+	0x02, 0x02, 0x10, 0x01, 0x52, 0x0a, 0x68, 0x65, 0x61, 0x64, 0x65, 0x72, 0x4e, 0x61, 0x6d, 0x65,
+	0x12, 0x29, 0x0a, 0x0c, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x5f, 0x70, 0x72, 0x65, 0x66, 0x69, 0x78,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x42, 0x06, 0xba, 0xb9, 0x02, 0x02, 0x10, 0x01, 0x52, 0x0b,
+	0x76, 0x61, 0x6c, 0x75, 0x65, 0x50, 0x72, 0x65, 0x66, 0x69, 0x78, 0x1a, 0xf6, 0x03, 0x0a, 0x08,
+	0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x12, 0x2b, 0x0a, 0x0d, 0x70, 0x72, 0x6f, 0x76,
+	0x69, 0x64, 0x65, 0x72, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42,
+	0x06, 0xba, 0xb9, 0x02, 0x02, 0x10, 0x01, 0x52, 0x0c, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65,
+	0x72, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x20, 0x0a, 0x07, 0x66, 0x6f, 0x72, 0x77, 0x61, 0x72, 0x64,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x42, 0x06, 0xba, 0xb9, 0x02, 0x02, 0x10, 0x01, 0x52, 0x07,
+	0x66, 0x6f, 0x72, 0x77, 0x61, 0x72, 0x64, 0x12, 0x1e, 0x0a, 0x06, 0x69, 0x73, 0x73, 0x75, 0x65,
+	0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x42, 0x06, 0xba, 0xb9, 0x02, 0x02, 0x10, 0x01, 0x52,
+	0x06, 0x69, 0x73, 0x73, 0x75, 0x65, 0x72, 0x12, 0x1c, 0x0a, 0x09, 0x61, 0x75, 0x64, 0x69, 0x65,
+	0x6e, 0x63, 0x65, 0x73, 0x18, 0x04, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09, 0x61, 0x75, 0x64, 0x69,
+	0x65, 0x6e, 0x63, 0x65, 0x73, 0x12, 0x53, 0x0a, 0x0b, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x5f,
+	0x6a, 0x77, 0x6b, 0x73, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x32, 0x2e, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x6d, 0x65, 0x73, 0x68, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x76, 0x31, 0x2e,
+	0x48, 0x74, 0x74, 0x70, 0x46, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x2e, 0x4a, 0x77, 0x74, 0x41, 0x75,
+	0x74, 0x68, 0x6e, 0x2e, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4a, 0x77, 0x6b, 0x73, 0x52, 0x0a,
+	0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4a, 0x77, 0x6b, 0x73, 0x12, 0x50, 0x0a, 0x0a, 0x6c, 0x6f,
+	0x63, 0x61, 0x6c, 0x5f, 0x6a, 0x77, 0x6b, 0x73, 0x18, 0x08, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x31,
+	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x6d, 0x65, 0x73, 0x68, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73,
+	0x2e, 0x76, 0x31, 0x2e, 0x48, 0x74, 0x74, 0x70, 0x46, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x2e, 0x4a,
+	0x77, 0x74, 0x41, 0x75, 0x74, 0x68, 0x6e, 0x2e, 0x4c, 0x6f, 0x63, 0x61, 0x6c, 0x4a, 0x77, 0x6b,
+	0x73, 0x52, 0x09, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x4a, 0x77, 0x6b, 0x73, 0x12, 0x5f, 0x0a, 0x10,
 	0x63, 0x6c, 0x61, 0x69, 0x6d, 0x5f, 0x74, 0x6f, 0x5f, 0x68, 0x65, 0x61, 0x64, 0x65, 0x72, 0x73,
 	0x18, 0x06, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x35, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x6d, 0x65,
 	0x73, 0x68, 0x2e, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x76, 0x31, 0x2e, 0x48, 0x74, 0x74, 0x70,
@@ -1976,7 +2053,7 @@ func file_api_types_v1_networking_proto_rawDescGZIP() []byte {
 }
 
 var file_api_types_v1_networking_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_api_types_v1_networking_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_api_types_v1_networking_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_api_types_v1_networking_proto_goTypes = []interface{}{
 	(HttpMethod)(0),                           // 0: protomesh.types.v1.HttpMethod
 	(TransportProtocol)(0),                    // 1: protomesh.types.v1.TransportProtocol
@@ -1993,15 +2070,16 @@ var file_api_types_v1_networking_proto_goTypes = []interface{}{
 	(*HttpFilter_JwtAuthn)(nil),               // 12: protomesh.types.v1.HttpFilter.JwtAuthn
 	(*HttpFilter_JwtAuthn_ClaimToHeader)(nil), // 13: protomesh.types.v1.HttpFilter.JwtAuthn.ClaimToHeader
 	(*HttpFilter_JwtAuthn_RemoteJwks)(nil),    // 14: protomesh.types.v1.HttpFilter.JwtAuthn.RemoteJwks
-	(*HttpFilter_JwtAuthn_FromHeader)(nil),    // 15: protomesh.types.v1.HttpFilter.JwtAuthn.FromHeader
-	(*HttpFilter_JwtAuthn_Provider)(nil),      // 16: protomesh.types.v1.HttpFilter.JwtAuthn.Provider
-	(*HttpFilter_JwtAuthn_Rule)(nil),          // 17: protomesh.types.v1.HttpFilter.JwtAuthn.Rule
-	(*InstanceSet_Instance)(nil),              // 18: protomesh.types.v1.InstanceSet.Instance
-	(*Service_Http1Options)(nil),              // 19: protomesh.types.v1.Service.Http1Options
-	(*Service_Http2Options)(nil),              // 20: protomesh.types.v1.Service.Http2Options
-	(*RoutingPolicy_Route)(nil),               // 21: protomesh.types.v1.RoutingPolicy.Route
-	(*RoutingPolicy_Cors)(nil),                // 22: protomesh.types.v1.RoutingPolicy.Cors
-	(*durationpb.Duration)(nil),               // 23: google.protobuf.Duration
+	(*HttpFilter_JwtAuthn_LocalJwks)(nil),     // 15: protomesh.types.v1.HttpFilter.JwtAuthn.LocalJwks
+	(*HttpFilter_JwtAuthn_FromHeader)(nil),    // 16: protomesh.types.v1.HttpFilter.JwtAuthn.FromHeader
+	(*HttpFilter_JwtAuthn_Provider)(nil),      // 17: protomesh.types.v1.HttpFilter.JwtAuthn.Provider
+	(*HttpFilter_JwtAuthn_Rule)(nil),          // 18: protomesh.types.v1.HttpFilter.JwtAuthn.Rule
+	(*InstanceSet_Instance)(nil),              // 19: protomesh.types.v1.InstanceSet.Instance
+	(*Service_Http1Options)(nil),              // 20: protomesh.types.v1.Service.Http1Options
+	(*Service_Http2Options)(nil),              // 21: protomesh.types.v1.Service.Http2Options
+	(*RoutingPolicy_Route)(nil),               // 22: protomesh.types.v1.RoutingPolicy.Route
+	(*RoutingPolicy_Cors)(nil),                // 23: protomesh.types.v1.RoutingPolicy.Cors
+	(*durationpb.Duration)(nil),               // 24: google.protobuf.Duration
 }
 var file_api_types_v1_networking_proto_depIdxs = []int32{
 	5,  // 0: protomesh.types.v1.NetworkingNode.http_ingress:type_name -> protomesh.types.v1.HttpIngress
@@ -2013,26 +2091,27 @@ var file_api_types_v1_networking_proto_depIdxs = []int32{
 	11, // 6: protomesh.types.v1.HttpFilter.grpc_web:type_name -> protomesh.types.v1.HttpFilter.GrpcWeb
 	12, // 7: protomesh.types.v1.HttpFilter.jwt_authn:type_name -> protomesh.types.v1.HttpFilter.JwtAuthn
 	4,  // 8: protomesh.types.v1.HttpIngress.http_filters:type_name -> protomesh.types.v1.HttpFilter
-	18, // 9: protomesh.types.v1.InstanceSet.instances:type_name -> protomesh.types.v1.InstanceSet.Instance
-	23, // 10: protomesh.types.v1.Service.connect_timeout:type_name -> google.protobuf.Duration
-	19, // 11: protomesh.types.v1.Service.instance_http1_options:type_name -> protomesh.types.v1.Service.Http1Options
-	20, // 12: protomesh.types.v1.Service.instance_http2_options:type_name -> protomesh.types.v1.Service.Http2Options
-	21, // 13: protomesh.types.v1.RoutingPolicy.routes:type_name -> protomesh.types.v1.RoutingPolicy.Route
-	22, // 14: protomesh.types.v1.RoutingPolicy.cors:type_name -> protomesh.types.v1.RoutingPolicy.Cors
-	16, // 15: protomesh.types.v1.HttpFilter.JwtAuthn.providers:type_name -> protomesh.types.v1.HttpFilter.JwtAuthn.Provider
-	17, // 16: protomesh.types.v1.HttpFilter.JwtAuthn.rules:type_name -> protomesh.types.v1.HttpFilter.JwtAuthn.Rule
-	23, // 17: protomesh.types.v1.HttpFilter.JwtAuthn.RemoteJwks.timeout:type_name -> google.protobuf.Duration
+	19, // 9: protomesh.types.v1.InstanceSet.instances:type_name -> protomesh.types.v1.InstanceSet.Instance
+	24, // 10: protomesh.types.v1.Service.connect_timeout:type_name -> google.protobuf.Duration
+	20, // 11: protomesh.types.v1.Service.instance_http1_options:type_name -> protomesh.types.v1.Service.Http1Options
+	21, // 12: protomesh.types.v1.Service.instance_http2_options:type_name -> protomesh.types.v1.Service.Http2Options
+	22, // 13: protomesh.types.v1.RoutingPolicy.routes:type_name -> protomesh.types.v1.RoutingPolicy.Route
+	23, // 14: protomesh.types.v1.RoutingPolicy.cors:type_name -> protomesh.types.v1.RoutingPolicy.Cors
+	17, // 15: protomesh.types.v1.HttpFilter.JwtAuthn.providers:type_name -> protomesh.types.v1.HttpFilter.JwtAuthn.Provider
+	18, // 16: protomesh.types.v1.HttpFilter.JwtAuthn.rules:type_name -> protomesh.types.v1.HttpFilter.JwtAuthn.Rule
+	24, // 17: protomesh.types.v1.HttpFilter.JwtAuthn.RemoteJwks.timeout:type_name -> google.protobuf.Duration
 	14, // 18: protomesh.types.v1.HttpFilter.JwtAuthn.Provider.remote_jwks:type_name -> protomesh.types.v1.HttpFilter.JwtAuthn.RemoteJwks
-	13, // 19: protomesh.types.v1.HttpFilter.JwtAuthn.Provider.claim_to_headers:type_name -> protomesh.types.v1.HttpFilter.JwtAuthn.ClaimToHeader
-	15, // 20: protomesh.types.v1.HttpFilter.JwtAuthn.Provider.from_headers:type_name -> protomesh.types.v1.HttpFilter.JwtAuthn.FromHeader
-	1,  // 21: protomesh.types.v1.InstanceSet.Instance.transport_protocol:type_name -> protomesh.types.v1.TransportProtocol
-	23, // 22: protomesh.types.v1.RoutingPolicy.Route.timeout:type_name -> google.protobuf.Duration
-	23, // 23: protomesh.types.v1.RoutingPolicy.Cors.max_age:type_name -> google.protobuf.Duration
-	24, // [24:24] is the sub-list for method output_type
-	24, // [24:24] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	15, // 19: protomesh.types.v1.HttpFilter.JwtAuthn.Provider.local_jwks:type_name -> protomesh.types.v1.HttpFilter.JwtAuthn.LocalJwks
+	13, // 20: protomesh.types.v1.HttpFilter.JwtAuthn.Provider.claim_to_headers:type_name -> protomesh.types.v1.HttpFilter.JwtAuthn.ClaimToHeader
+	16, // 21: protomesh.types.v1.HttpFilter.JwtAuthn.Provider.from_headers:type_name -> protomesh.types.v1.HttpFilter.JwtAuthn.FromHeader
+	1,  // 22: protomesh.types.v1.InstanceSet.Instance.transport_protocol:type_name -> protomesh.types.v1.TransportProtocol
+	24, // 23: protomesh.types.v1.RoutingPolicy.Route.timeout:type_name -> google.protobuf.Duration
+	24, // 24: protomesh.types.v1.RoutingPolicy.Cors.max_age:type_name -> google.protobuf.Duration
+	25, // [25:25] is the sub-list for method output_type
+	25, // [25:25] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_api_types_v1_networking_proto_init() }
@@ -2186,7 +2265,7 @@ func file_api_types_v1_networking_proto_init() {
 			}
 		}
 		file_api_types_v1_networking_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HttpFilter_JwtAuthn_FromHeader); i {
+			switch v := v.(*HttpFilter_JwtAuthn_LocalJwks); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2198,7 +2277,7 @@ func file_api_types_v1_networking_proto_init() {
 			}
 		}
 		file_api_types_v1_networking_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HttpFilter_JwtAuthn_Provider); i {
+			switch v := v.(*HttpFilter_JwtAuthn_FromHeader); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2210,7 +2289,7 @@ func file_api_types_v1_networking_proto_init() {
 			}
 		}
 		file_api_types_v1_networking_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HttpFilter_JwtAuthn_Rule); i {
+			switch v := v.(*HttpFilter_JwtAuthn_Provider); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2222,7 +2301,7 @@ func file_api_types_v1_networking_proto_init() {
 			}
 		}
 		file_api_types_v1_networking_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*InstanceSet_Instance); i {
+			switch v := v.(*HttpFilter_JwtAuthn_Rule); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2234,7 +2313,7 @@ func file_api_types_v1_networking_proto_init() {
 			}
 		}
 		file_api_types_v1_networking_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Service_Http1Options); i {
+			switch v := v.(*InstanceSet_Instance); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2246,7 +2325,7 @@ func file_api_types_v1_networking_proto_init() {
 			}
 		}
 		file_api_types_v1_networking_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Service_Http2Options); i {
+			switch v := v.(*Service_Http1Options); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2258,7 +2337,7 @@ func file_api_types_v1_networking_proto_init() {
 			}
 		}
 		file_api_types_v1_networking_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RoutingPolicy_Route); i {
+			switch v := v.(*Service_Http2Options); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2270,6 +2349,18 @@ func file_api_types_v1_networking_proto_init() {
 			}
 		}
 		file_api_types_v1_networking_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RoutingPolicy_Route); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_types_v1_networking_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RoutingPolicy_Cors); i {
 			case 0:
 				return &v.state
@@ -2304,7 +2395,7 @@ func file_api_types_v1_networking_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_api_types_v1_networking_proto_rawDesc,
 			NumEnums:      3,
-			NumMessages:   20,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

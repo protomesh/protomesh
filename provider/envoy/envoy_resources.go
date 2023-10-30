@@ -119,6 +119,25 @@ func fromHttpIngress(node *typesv1.HttpIngress) (*listenerv3.Listener, *routev3.
 							},
 						},
 					}
+				} else if provider.LocalJwks != nil {
+					localJwks := &jwtauthnv3.JwtProvider_LocalJwks{}
+
+					if len(provider.LocalJwks.Filename) > 0 {
+						localJwks.LocalJwks = &corev3.DataSource{
+							Specifier: &corev3.DataSource_Filename{
+								Filename: provider.LocalJwks.Filename,
+							},
+						}
+					} else if len(provider.LocalJwks.InlineString) > 0 {
+						localJwks.LocalJwks = &corev3.DataSource{
+							Specifier: &corev3.DataSource_InlineString{
+								InlineString: provider.LocalJwks.InlineString,
+							},
+						}
+					}
+
+					jwtProvider.JwksSourceSpecifier = localJwks
+
 				}
 
 				for _, claimToHeader := range provider.ClaimToHeaders {

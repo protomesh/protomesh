@@ -111,6 +111,16 @@ message HttpFilter {
       google.protobuf.Duration timeout = 3;
     }
 
+    // JWKS can be fetched from local file system. This field specifies the local file path.
+    message LocalJwks {
+
+      // Content of the JWKS file.
+      string inline_string = 1;
+      // Local file path to the JWKS file.
+      string filename = 2;
+
+    }
+
     // FromHeader specify headers to get the JWT from.
     message FromHeader {
       // This is the header name to get the JWT. Example: "Authorization"
@@ -151,6 +161,9 @@ message HttpFilter {
       // JWKS can be fetched from remote server via HTTP/HTTPS.
       // This field specifies the remote HTTP URI and how the fetched JWKS should be cached.
       RemoteJwks remote_jwks = 5;
+
+      // JWKS can be fetched from local file system.
+      LocalJwks local_jwks = 8;
 
       // Add JWT claim to HTTP Header Specify the claim name you want to
       // copy in which HTTP header. For examples, following config:
