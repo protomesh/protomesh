@@ -174,6 +174,22 @@ func fromHttpIngress(node *typesv1.HttpIngress) (*listenerv3.Listener, *routev3.
 					})
 				}
 
+				requiresProvider := &jwtauthnv3.JwtRequirement{
+					RequiresType: &jwtauthnv3.JwtRequirement_RequiresAny{
+						RequiresAny: &jwtauthnv3.JwtRequirementOrList{
+							Requirements: reqs,
+						},
+					},
+				}
+
+				if len(rule.RequiredProvidersNames) == 1 {
+
+					requiresProvider.RequiresType = &jwtauthnv3.JwtRequirement_ProviderName{
+						ProviderName: rule.RequiredProvidersNames[0],
+					}
+
+				}
+
 				jwtAuthn.Rules = append(jwtAuthn.Rules, &jwtauthnv3.RequirementRule{
 					Match: &routev3.RouteMatch{
 						PathSpecifier: &routev3.RouteMatch_Prefix{
@@ -182,13 +198,7 @@ func fromHttpIngress(node *typesv1.HttpIngress) (*listenerv3.Listener, *routev3.
 						CaseSensitive: wrapperspb.Bool(false),
 					},
 					RequirementType: &jwtauthnv3.RequirementRule_Requires{
-						Requires: &jwtauthnv3.JwtRequirement{
-							RequiresType: &jwtauthnv3.JwtRequirement_RequiresAny{
-								RequiresAny: &jwtauthnv3.JwtRequirementOrList{
-									Requirements: reqs,
-								},
-							},
-						},
+						Requires: requiresProvider,
 					},
 				})
 
